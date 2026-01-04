@@ -3,11 +3,12 @@
   import { goto } from '$app/navigation';
   import { layoutStore } from '$lib/stores/layout.store';
   import { photoboothStore } from '$lib/stores/photobooth.store';
+  import { CAPTURE_SETTINGS } from './settings';
 
   let video: HTMLVideoElement;
   let canvas: HTMLCanvasElement;
 
-  let countdown = 3;
+  let countdown = CAPTURE_SETTINGS.COUNTDOWN_DURATION;
   let shooting = false;
   let reviewing = false;
   let flash = false;
@@ -18,7 +19,7 @@
   let layout: any = null;
   let shots: string[] = [];
 
-  // ✅ subscribe without navigation
+  // subscribe without navigation
   layoutStore.subscribe(v => {
     layout = v;
     maxShots = v?.count ?? 0;
@@ -30,7 +31,7 @@
 
   let stream: MediaStream | null = null;
   
-  // ✅ Re-attach stream whenever video element is created/recreated
+  // Re-attach stream whenever video element is created/recreated
   $: if (video && stream) {
     video.srcObject = stream;
   }
@@ -46,7 +47,11 @@
   async function initCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1080 }, height: { ideal: 1080 } }
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: CAPTURE_SETTINGS.CAMERA_IDEAL_WIDTH }, 
+          height: { ideal: CAPTURE_SETTINGS.CAMERA_IDEAL_HEIGHT } 
+        }
       });
     } catch (err) {
       console.error("Camera access error:", err);
@@ -81,7 +86,7 @@
     
     // Flash effect
     flash = true;
-    setTimeout(() => flash = false, 100);
+    setTimeout(() => flash = false, CAPTURE_SETTINGS.FLASH_DURATION_MS);
 
     const ctx = canvas.getContext('2d')!;
     const size = Math.min(video.videoWidth, video.videoHeight);
@@ -117,7 +122,7 @@
 
   function runCountdown() {
     return new Promise<void>((resolve) => {
-      countdown = 3;
+      countdown = CAPTURE_SETTINGS.COUNTDOWN_DURATION;
       const interval = setInterval(() => {
         countdown--;
         if (countdown === 0) {

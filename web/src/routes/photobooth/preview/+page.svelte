@@ -6,15 +6,16 @@
 
   import { renderStripCanvas } from '$lib/utils/renderStrip';
   import { applyGLFXFilter } from '$lib/utils/glfxFilters';
+  import { PREVIEW_SETTINGS } from './settings';
 
 
   let layout: { count: 2 | 3 | 4 } | null = null;
   let shots: string[] = [];
 
-  let filter = 'none';
-  let caption = '';
-  let captionSize = 60;
-  let font = 'Lobster';
+  let filter = PREVIEW_SETTINGS.DEFAULT_FILTER;
+  let caption = PREVIEW_SETTINGS.DEFAULT_CAPTION;
+  let captionSize = PREVIEW_SETTINGS.DEFAULT_CAPTION_SIZE;
+  let font = PREVIEW_SETTINGS.DEFAULT_FONT;
 
 
 
@@ -43,7 +44,7 @@
       const canvas = await renderStripCanvas(
         shots,
         layout.count,
-        300,
+        PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH,
         filter
       );
 
@@ -163,7 +164,7 @@
             <h2 class="text-[10px] font-bold uppercase text-purple-300 tracking-[0.2em]">Filter</h2>
           </div>
           <div class="grid grid-cols-2 md:flex md:flex-wrap gap-2">
-            {#each ['none', 'cinematic', 'film', 'warm', 'bw'] as f}
+            {#each PREVIEW_SETTINGS.AVAILABLE_FILTERS as f}
               <button
                 class="px-4 py-2.5 text-[11px] font-medium rounded-xl border transition-all {filter === f ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-transparent border-slate-100 text-slate-400 hover:border-purple-100 hover:text-purple-400'}"
                 on:click={() => { filter = f; onFilterChange(); }}
@@ -186,20 +187,7 @@
                 on:change={updatePreview}
                 class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-xs font-medium text-slate-600 focus:ring-1 focus:ring-purple-200 transition-all outline-none"
               >
-                {#each [
-                  { id: 'Lobster', label: 'Lobster' },
-                  { id: 'Pacifico', label: 'Pacifico' },
-                  { id: 'Caveat', label: 'Caveat' },
-                  { id: 'Dancing Script', label: 'Dancing' },
-                  { id: 'Bebas Neue', label: 'Bebas' },
-                  { id: 'Righteous', label: 'Righteous' },
-                  { id: 'Abril Fatface', label: 'Abril' },
-                  { id: 'Cormorant Garamond', label: 'Classic' },
-                  { id: 'Permanent Marker', label: 'Marker' },
-                  { id: 'Special Elite', label: 'Typewriter' },
-                  { id: 'Monoton', label: 'Retro' },
-                  { id: 'Montserrat', label: 'Clean' }
-                ] as fontOption}
+                {#each PREVIEW_SETTINGS.FONTS as fontOption}
                   <option value={fontOption.id}>{fontOption.label}</option>
                 {/each}
               </select>

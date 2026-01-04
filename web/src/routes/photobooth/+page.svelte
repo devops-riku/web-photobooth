@@ -1,14 +1,13 @@
 <script lang="ts">
   import { layoutStore, type LayoutOption } from '$lib/stores/layout.store';
   import { goto } from '$app/navigation';
-
-  const STRIP_WIDTH = 600;
+  import { BOOTH_SETTINGS } from './settings';
 
   function select(count: 2 | 3 | 4) {
     const layout: LayoutOption = {
       count,
-      width: STRIP_WIDTH,
-      height: STRIP_WIDTH * count * 1.5 // classic booth ratio
+      width: BOOTH_SETTINGS.STRIP_WIDTH,
+      height: BOOTH_SETTINGS.STRIP_WIDTH * count * BOOTH_SETTINGS.ASPECT_RATIO
     };
 
     layoutStore.set(layout);
@@ -18,12 +17,12 @@
 
 <div class="min-h-screen flex flex-col items-center justify-start md:justify-center p-6 bg-white">
   <div class="text-center mt-8 mb-12 md:mt-0">
-    <h1 class="text-4xl font-medium tracking-tight text-purple-900/80 mb-3">Wuby</h1>
+    <h1 class="text-4xl font-medium tracking-tight text-purple-900/80 mb-3">{BOOTH_SETTINGS.BRAND_NAME}</h1>
     <p class="text-purple-400/80 text-sm font-medium tracking-wide">Select your layout</p>
   </div>
 
   <div class="flex flex-col md:flex-row gap-6 md:gap-8 max-w-4xl w-full justify-center px-4 mb-12">
-    {#each [2, 3, 4] as count}
+    {#each BOOTH_SETTINGS.LAYOUT_OPTIONS as count}
       <button 
         class="group flex flex-row md:flex-col items-center gap-6 transition-all duration-400 active:scale-95 bg-purple-50/20 md:bg-transparent p-4 md:p-0 rounded-3xl" 
         on:click={() => select(count as 2|3|4)}
