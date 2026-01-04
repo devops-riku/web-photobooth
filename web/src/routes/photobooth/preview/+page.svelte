@@ -53,10 +53,16 @@
       // ─────────────────────────
       // TOP BRAND (inside top canvas)
       // ─────────────────────────
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = '#a855f7'; // purple-500
       ctx.textAlign = 'center';
-      ctx.font = 'bold 32px system-ui, sans-serif';
-      ctx.fillText('WUBY', canvas.width / 2, 100);
+      ctx.font = '300 42px Outfit, Inter, sans-serif'; // Lighter weight
+      ctx.fillText('Wuby', canvas.width / 2, 130);
+
+      // Simple minimalist dot instead of a line
+      ctx.fillStyle = '#f3e8ff'; // purple-100
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, 160, 4, 0, Math.PI * 2);
+      ctx.fill();
 
       // ─────────────────────────
       // BOTTOM CAPTION
@@ -89,123 +95,143 @@
   }
 </script>
 
-<div class="h-screen flex flex-col overflow-hidden bg-slate-50">
-  <header class="p-3 border-b bg-white flex justify-between items-center shrink-0">
-    <h1 class="text-lg font-bold">Preview</h1>
+<div class="h-screen flex flex-col bg-[#fdfaff] overflow-hidden">
+  <!-- Top Bar -->
+  <header class="h-16 border-b border-purple-50 flex justify-between items-center px-8 bg-white shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-semibold tracking-tight text-purple-900/60 uppercase">Preview</span>
+    </div>
+    
     <button
-      class="btn variant-filled-primary px-6 py-1.5 text-sm font-bold shadow-sm"
+      class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg text-xs font-bold transition-all active:scale-95"
       on:click={() => goto('/photobooth/save')}
     >
       Continue
     </button>
   </header>
 
-  <main class="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-6">
-    <!-- Strip Preview Section -->
-    <div class="flex-1 flex items-center justify-center min-h-0">
+  <main class="flex-1 flex overflow-hidden">
+    <!-- Strip Preview Section - Minimalist -->
+    <div class="flex-1 flex items-center justify-center p-12">
       {#if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-6 py-8 rounded-xl text-center max-w-sm shadow-sm">
-          <p class="font-bold mb-2">Something went wrong</p>
-          <p class="text-sm opacity-80 mb-4">{error}</p>
-          <button class="btn variant-ghost-surface py-2 px-4 text-xs" on:click={() => location.reload()}>
-            Try Again
-          </button>
+        <div class="text-center">
+          <p class="text-sm text-red-400 mb-4">{error}</p>
+          <button class="text-xs font-bold text-purple-500 underline" on:click={() => location.reload()}>Try again</button>
         </div>
       {:else if previewUrl}
-        <div class="h-full flex items-center justify-center p-2">
+        <div class="h-full relative flex items-center justify-center">
           <img
             src={previewUrl}
             alt="Photobooth strip"
-            class="h-full w-auto object-contain rounded shadow-2xl border-[6px] border-white"
+            class="h-full w-auto object-contain shadow-[0_20px_50px_rgba(159,122,234,0.1)] border-[8px] border-white rounded-sm transition-transform duration-500"
           />
         </div>
       {:else}
         <div class="flex flex-col items-center gap-4">
-          <div class="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin"></div>
-          <p class="text-slate-400 font-medium animate-pulse">Building your strip...</p>
+          <div class="w-6 h-6 border-2 border-purple-100 border-t-purple-400 rounded-full animate-spin"></div>
+          <p class="text-[10px] font-bold text-purple-300 uppercase tracking-widest">Processing</p>
         </div>
       {/if}
     </div>
 
-    <!-- Controls Section -->
-    <aside class="w-full md:w-80 shrink-0 overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl flex flex-col">
-      <div class="p-5 flex flex-col gap-5">
-        <h2 class="text-xs font-black uppercase text-slate-400 tracking-widest">Customization</h2>
-        
-        <!-- Filter -->
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-bold text-slate-700">Effect</span>
-          <div class="grid grid-cols-3 gap-2">
+    <!-- Controls Section - Minimalist Sidebar -->
+    <aside class="w-80 border-l border-purple-50 bg-white flex flex-col overflow-hidden">
+      <div class="p-8 flex flex-col gap-10 h-full overflow-y-auto">
+        <section>
+          <h2 class="text-[10px] font-bold uppercase text-purple-300 tracking-[0.2em] mb-6">Filter</h2>
+          <div class="flex flex-wrap gap-2">
             {#each ['none', 'cinematic', 'film', 'warm', 'bw'] as f}
               <button
-                class="py-2 text-xs rounded-lg border transition-all {filter === f ? 'bg-primary-500 text-white border-primary-600 shadow-md ring-2 ring-primary-500/20' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'}"
+                class="px-4 py-2 text-[11px] font-medium rounded-full border transition-all {filter === f ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-transparent border-slate-100 text-slate-400 hover:border-purple-100 hover:text-purple-400'}"
                 on:click={() => { filter = f; onFilterChange(); }}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             {/each}
           </div>
-        </label>
+        </section>
 
-        <!-- Font -->
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-bold text-slate-700">Font Style</span>
-          <select
-            bind:value={font}
-            on:change={updatePreview}
-            class="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-          >
-            {#each [
-              { id: 'Lobster', label: 'Lobster' },
-              { id: 'Pacifico', label: 'Pacifico' },
-              { id: 'Caveat', label: 'Caveat' },
-              { id: 'Dancing Script', label: 'Dancing' },
-              { id: 'Bebas Neue', label: 'Bebas' },
-              { id: 'Righteous', label: 'Righteous' },
-              { id: 'Abril Fatface', label: 'Abril' },
-              { id: 'Cormorant Garamond', label: 'Classic' },
-              { id: 'Permanent Marker', label: 'Marker' },
-              { id: 'Special Elite', label: 'Typewriter' },
-              { id: 'Monoton', label: 'Retro' },
-              { id: 'Montserrat', label: 'Clean' }
-            ] as fontOption}
-              <option value={fontOption.id}>{fontOption.label}</option>
-            {/each}
-          </select>
-        </label>
+        <section>
+          <h2 class="text-[10px] font-bold uppercase text-purple-300 tracking-[0.2em] mb-6">Typography</h2>
+          
+          <div class="flex flex-col gap-6">
+            <div class="flex flex-col gap-2">
+              <label for="font-select" class="text-[10px] font-medium text-slate-400">Style</label>
+              <select
+                id="font-select"
+                bind:value={font}
+                on:change={updatePreview}
+                class="w-full bg-slate-50 border-none rounded-lg px-4 py-3 text-xs font-medium text-slate-600 focus:ring-1 focus:ring-purple-200 transition-all outline-none"
+              >
+                {#each [
+                  { id: 'Lobster', label: 'Lobster' },
+                  { id: 'Pacifico', label: 'Pacifico' },
+                  { id: 'Caveat', label: 'Caveat' },
+                  { id: 'Dancing Script', label: 'Dancing' },
+                  { id: 'Bebas Neue', label: 'Bebas' },
+                  { id: 'Righteous', label: 'Righteous' },
+                  { id: 'Abril Fatface', label: 'Abril' },
+                  { id: 'Cormorant Garamond', label: 'Classic' },
+                  { id: 'Permanent Marker', label: 'Marker' },
+                  { id: 'Special Elite', label: 'Typewriter' },
+                  { id: 'Monoton', label: 'Retro' },
+                  { id: 'Montserrat', label: 'Clean' }
+                ] as fontOption}
+                  <option value={fontOption.id}>{fontOption.label}</option>
+                {/each}
+              </select>
+            </div>
 
-        <!-- Caption -->
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-bold text-slate-700">Message</span>
-          <input
-            type="text"
-            bind:value={caption}
-            on:input={onCaptionInput}
-            placeholder="Write something..."
-            class="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-          />
-        </label>
+            <div class="flex flex-col gap-2">
+              <label for="message-input" class="text-[10px] font-medium text-slate-400">Caption</label>
+              <input
+                id="message-input"
+                type="text"
+                bind:value={caption}
+                on:input={onCaptionInput}
+                placeholder="Type here..."
+                class="w-full bg-slate-50 border-none rounded-lg px-4 py-3 text-xs font-medium text-slate-600 focus:ring-1 focus:ring-purple-200 transition-all outline-none"
+              />
+            </div>
 
-        <!-- Caption Size -->
-        <label class="flex flex-col gap-1.5 pb-4">
-          <div class="flex justify-between items-center">
-            <span class="text-sm font-bold text-slate-700">Font Size</span>
-            <span class="text-[10px] font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500">{captionSize}px</span>
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between">
+                <label for="size-range" class="text-[10px] font-medium text-slate-400">Size</label>
+                <span class="text-[10px] font-bold text-purple-400">{captionSize}px</span>
+              </div>
+              <input
+                id="size-range"
+                type="range"
+                min="12"
+                max="100"
+                step="1"
+                bind:value={captionSize}
+                on:input={updatePreview}
+                class="w-full accent-purple-300"
+              />
+            </div>
           </div>
-          <input
-            type="range"
-            min="12"
-            max="60"
-            step="1"
-            bind:value={captionSize}
-            on:input={updatePreview}
-            class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
-          />
-        </label>
+        </section>
       </div>
     </aside>
   </main>
 </div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.05);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.1);
+  }
+</style>
 
 
 

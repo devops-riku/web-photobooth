@@ -5,6 +5,40 @@
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
+@layer base {
+    :root {
+        --primary-50: #faf5ff;
+        --primary-100: #f3e8ff;
+        --primary-200: #e9d5ff;
+        --primary-300: #d8b4fe;
+        --primary-400: #c084fc;
+        --primary-500: #a855f7;
+        --primary-600: #9333ea;
+        --primary-700: #7e22ce;
+        --primary-800: #6b21a8;
+        --primary-900: #581c87;
+
+        /* Pastel overrides */
+        --pastel-purple: #f8f4ff;
+        --ui-purple: #f3ebff;
+        --border-purple: #e9d8fd;
+    }
+
+    body {
+        @apply bg-[#fdfaff] text-slate-700 font-sans antialiased;
+    }
+}
+
+@layer utilities {
+    .minimal-card {
+        @apply bg-white border border-[#e9d8fd] shadow-sm rounded-2xl;
+    }
+
+    .text-pastel {
+        @apply text-purple-400;
+    }
+}
+
 html,
 body {
     height: 100%;

@@ -96,65 +96,70 @@
     aspect-ratio: 1 / 1;
     overflow: hidden;
     position: relative;
-    border-radius: 1rem;
   }
   
   video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 100%;
-    min-height: 100%;
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    transform: scaleX(-1);
   }
 </style>
 
-<div class="h-screen flex flex-col overflow-hidden bg-slate-900 text-white">
-  <header class="p-4 shrink-0 flex justify-between items-center bg-black/20">
-    <h1 class="text-lg font-bold">Capture</h1>
-    <div class="text-sm font-mono opacity-60">
-      Shot {currentShots + 1} / {maxShots}
+<div class="h-screen flex flex-col bg-white overflow-hidden">
+  <!-- Status Bar -->
+  <header class="p-6 flex justify-between items-center">
+    <div class="flex items-center gap-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+      <span class="text-[10px] font-bold tracking-[0.2em] text-purple-400 uppercase">Booth Session</span>
+    </div>
+    
+    <div class="flex gap-1.5">
+      {#each Array(maxShots) as _, i}
+        <div class="w-8 h-1 rounded-full transition-all duration-700 {i < currentShots ? 'bg-purple-300' : 'bg-purple-50'}"></div>
+      {/each}
     </div>
   </header>
 
-  <main class="flex-1 flex flex-col items-center justify-center p-6 gap-8">
-    <div class="relative w-full max-w-[320px] aspect-square">
-      <div class="absolute inset-0 video-container rounded-2xl overflow-hidden border-4 border-white/20 shadow-2xl bg-black">
+  <main class="flex-1 flex flex-col items-center justify-center p-6 gap-12">
+    <!-- Camera Viewport - Minimalist -->
+    <div class="relative w-full max-w-[400px] aspect-square">
+      <div class="absolute inset-0 video-container rounded-3xl overflow-hidden border border-purple-50 shadow-sm bg-purple-50/10">
         <video
           bind:this={video}
           autoplay
           playsinline
-          class="w-full h-full object-cover"
         ></video>
 
         {#if shooting && countdown > 0}
-          <div class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] text-white text-8xl font-black drop-shadow-2xl">
-            {countdown}
+          <div class="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all duration-300">
+            <span class="text-9xl font-light text-purple-900/60 leading-none">
+              {countdown}
+            </span>
           </div>
         {/if}
       </div>
-      
-      <!-- Decorative corners -->
-      <div class="absolute -top-2 -left-2 w-8 h-8 border-t-4 border-l-4 border-primary-500 rounded-tl-lg"></div>
-      <div class="absolute -top-2 -right-2 w-8 h-8 border-t-4 border-r-4 border-primary-500 rounded-tr-lg"></div>
-      <div class="absolute -bottom-2 -left-2 w-8 h-8 border-b-4 border-l-4 border-primary-500 rounded-bl-lg"></div>
-      <div class="absolute -bottom-2 -right-2 w-8 h-8 border-b-4 border-r-4 border-primary-500 rounded-br-lg"></div>
     </div>
 
+    <!-- Simple Trigger -->
     <div class="flex flex-col items-center gap-6">
       <button
-        class="w-20 h-20 rounded-full border-8 border-white/20 p-1 transition-all active:scale-90 disabled:opacity-50 disabled:scale-100"
+        class="w-16 h-16 rounded-full border border-purple-100 p-1 transition-all active:scale-90 hover:border-purple-200 disabled:opacity-30 disabled:scale-100"
         on:click={startSequence}
         disabled={shooting}
       >
-        <div class="w-full h-full rounded-full bg-white shadow-inner flex items-center justify-center">
-          <div class="w-4 h-4 rounded-full bg-primary-600 animate-pulse {shooting ? 'opacity-0' : ''}"></div>
+        <div class="w-full h-full rounded-full bg-purple-50 flex items-center justify-center group">
+          <div class="w-3 h-3 rounded-full bg-purple-400 {shooting ? 'animate-ping' : ''}"></div>
         </div>
       </button>
       
-      <p class="text-sm font-medium text-white/50 animate-pulse">
-        {shooting ? 'Smile!' : 'Ready when you are'}
+      <p class="text-[11px] font-medium tracking-widest uppercase text-purple-300">
+        {#if shooting}
+          Look at the camera
+        {:else}
+          Tap to capture
+        {/if}
       </p>
     </div>
   </main>
