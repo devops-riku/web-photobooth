@@ -190,11 +190,11 @@
     </div>
   </header>
 
-  <main class="flex-1 flex flex-col items-center justify-center p-6 gap-12 overflow-hidden">
+  <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 gap-8 md:gap-12 overflow-hidden bg-white">
     {#if !reviewing}
       <!-- Camera Viewport - Only visible when not reviewing -->
-      <div class="relative w-full max-w-[420px] aspect-square animate-in zoom-in-95 duration-500">
-        <div class="absolute inset-0 video-container rounded-[2.5rem] overflow-hidden border border-purple-50 shadow-[0_8px_30px_rgb(159,122,234,0.05)] bg-purple-50/10">
+      <div class="relative w-full max-w-[320px] md:max-w-[420px] aspect-square animate-in zoom-in-95 duration-500">
+        <div class="absolute inset-0 video-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-purple-50 shadow-[0_8px_30px_rgb(159,122,234,0.05)] bg-purple-50/10">
           {#if flash}
             <div class="absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-300"></div>
           {/if}
@@ -208,7 +208,7 @@
 
           {#if shooting && countdown > 0}
             <div class="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] z-50 transition-all duration-300">
-              <span class="text-9xl font-light text-purple-900/60 leading-none">
+              <span class="text-7xl md:text-9xl font-light text-purple-900/60 leading-none">
                 {countdown}
               </span>
             </div>
@@ -217,28 +217,28 @@
       </div>
     {:else}
       <!-- Sequence Review - Horizontal Lineup (not trapped in a card) -->
-      <div class="w-full flex flex-col items-center gap-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        <div class="flex gap-6 px-12 py-4 overflow-x-auto no-scrollbar snap-x max-w-full">
+      <div class="w-full flex flex-col items-center gap-6 md:gap-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div class="flex gap-4 md:gap-6 px-6 md:px-12 py-4 overflow-x-auto no-scrollbar snap-x max-w-full">
           {#each shots as shot, i}
-            <div class="flex-shrink-0 w-64 aspect-square relative group/shot snap-center">
+            <div class="flex-shrink-0 w-48 md:w-64 aspect-square relative group/shot snap-center">
               <img 
                 src={shot} 
                 alt="Capture {i + 1}" 
-                class="w-full h-full object-cover rounded-3xl shadow-[0_20px_50px_rgba(159,122,234,0.12)] border-4 border-white transition-all duration-500 group-hover/shot:scale-[1.05] group-hover/shot:-rotate-1" 
+                class="w-full h-full object-cover rounded-2xl md:rounded-3xl shadow-[0_15px_40px_rgba(159,122,234,0.1)] border-4 border-white transition-all duration-500 md:group-hover/shot:scale-[1.05] md:group-hover/shot:-rotate-1" 
               />
               
-              <!-- Retake overlay -->
-              <div class="absolute inset-0 bg-purple-900/40 opacity-0 group-hover/shot:opacity-100 transition-all duration-300 rounded-3xl flex flex-col items-center justify-center gap-3">
+              <!-- Retake overlay - Simplified for mobile (visible by default or on tap) -->
+              <div class="absolute inset-0 bg-purple-900/40 opacity-0 group-hover/shot:opacity-100 md:opacity-0 transition-all duration-300 rounded-2xl md:rounded-3xl flex flex-col items-center justify-center gap-3">
                 <button 
                   on:click={() => retakeSingle(i)}
-                  class="bg-white text-purple-600 px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-xl transform hover:scale-110 active:scale-95 transition-all"
+                  class="bg-white text-purple-600 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest shadow-xl transform active:scale-95 transition-all"
                 >
-                  Swap this
+                  Swap
                 </button>
               </div>
               
               <div class="absolute -top-6 left-0 right-0 text-center">
-                <span class="text-[9px] font-bold text-purple-300/60 uppercase tracking-[0.3em]">Photo 0{i + 1}</span>
+                <span class="text-[8px] md:text-[9px] font-bold text-purple-300/60 uppercase tracking-[0.3em]">Photo 0{i + 1}</span>
               </div>
             </div>
           {/each}
@@ -247,20 +247,20 @@
     {/if}
 
     <!-- Simple Trigger / Decision Controls -->
-    <div class="flex flex-col items-center gap-8">
+    <div class="flex flex-col items-center gap-6 md:gap-8">
       {#if !reviewing}
         <div class="flex flex-col items-center gap-4">
           <button
-            class="w-20 h-20 rounded-full border-2 border-purple-50 p-1.5 transition-all active:scale-90 hover:border-purple-100 disabled:opacity-30 disabled:scale-100 shadow-sm"
+            class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-50 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-100 disabled:opacity-30 disabled:scale-100 shadow-sm"
             on:click={startSequence}
             disabled={shooting}
           >
             <div class="w-full h-full rounded-full bg-purple-50/50 flex items-center justify-center group border border-purple-100">
-              <div class="w-4 h-4 rounded-full bg-purple-400 {shooting ? 'animate-ping' : ''}"></div>
+              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-400 {shooting ? 'animate-ping' : ''}"></div>
             </div>
           </button>
           
-          <p class="text-[10px] font-bold tracking-[0.25em] uppercase text-purple-200">
+          <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-200">
             {#if shooting}
               Capture in progress
             {:else}
@@ -269,22 +269,22 @@
           </p>
         </div>
       {:else}
-        <div class="flex flex-col items-center gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-          <div class="flex gap-4">
+        <div class="flex flex-col items-center gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+          <div class="flex flex-col md:flex-row gap-3 md:gap-4 px-6 w-full md:w-auto">
             <button
-              class="px-10 py-4 rounded-full border border-purple-100 text-purple-300 text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-50 hover:text-purple-500 transition-all active:scale-95"
+              class="w-full md:w-auto px-10 py-3.5 md:py-4 rounded-full border border-purple-100 text-purple-300 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-50 hover:text-purple-500 transition-all active:scale-95"
               on:click={retake}
             >
               Retake All
             </button>
             <button
-              class="px-12 py-4 rounded-full bg-purple-500 text-white text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-600 shadow-[0_10px_30px_rgba(168,85,247,0.3)] transition-all active:scale-95"
+              class="w-full md:w-auto px-12 py-3.5 md:py-4 rounded-full bg-purple-500 text-white text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-600 shadow-[0_10px_30px_rgba(168,85,247,0.3)] transition-all active:scale-95"
               on:click={proceed}
             >
               Continue to Edit
             </button>
           </div>
-          <p class="text-[10px] font-bold text-purple-200 uppercase tracking-[0.3em]">Select a photo to swap or proceed</p>
+          <p class="text-[9px] md:text-[10px] font-bold text-purple-200 uppercase tracking-[0.3em]">Tap a photo to swap or proceed</p>
         </div>
       {/if}
     </div>
