@@ -102,12 +102,20 @@
       <span class="text-sm font-semibold tracking-tight text-purple-900/60 uppercase">Preview</span>
     </div>
     
-    <button
-      class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg text-xs font-bold transition-all active:scale-95"
-      on:click={() => goto('/photobooth/save')}
-    >
-      Continue
-    </button>
+    <div class="flex gap-3">
+      <button
+        class="border border-purple-100 hover:bg-purple-50 text-purple-400 px-6 py-2 rounded-lg text-xs font-bold transition-all active:scale-95"
+        on:click={() => goto('/photobooth/capture')}
+      >
+        Retake
+      </button>
+      <button
+        class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg text-xs font-bold transition-all active:scale-95"
+        on:click={() => goto('/photobooth/save')}
+      >
+        Continue
+      </button>
+    </div>
   </header>
 
   <main class="flex-1 flex overflow-hidden">
