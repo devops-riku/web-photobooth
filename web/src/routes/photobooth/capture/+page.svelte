@@ -264,7 +264,7 @@
   }
 </style>
 
-<div class="h-screen flex flex-col bg-white overflow-hidden">
+<div class="h-screen flex flex-col bg-[#f8f2ff] overflow-hidden">
   <!-- Status Bar -->
   <header class="p-6 flex justify-between items-center">
     <div class="flex items-center gap-2">
@@ -274,16 +274,16 @@
     
     <div class="flex gap-1.5">
       {#each Array(maxShots) as _, i}
-        <div class="w-8 h-1 rounded-full transition-all duration-700 {i < currentShots ? 'bg-purple-300' : 'bg-purple-50'}"></div>
+        <div class="w-8 h-1 rounded-full transition-all duration-700 {i < currentShots ? 'bg-purple-400' : 'bg-purple-100'}"></div>
       {/each}
     </div>
   </header>
 
-  <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 gap-8 md:gap-12 overflow-hidden bg-white">
+  <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 gap-8 md:gap-12 overflow-hidden bg-transparent">
     {#if !reviewing}
       <!-- Camera Viewport - Only visible when not reviewing -->
       <div class="relative w-full max-w-[320px] md:max-w-[420px] aspect-square">
-        <div class="absolute inset-0 video-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-purple-50 shadow-[0_8px_30px_rgb(159,122,234,0.05)] bg-purple-50/10">
+        <div class="absolute inset-0 video-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-purple-200/50 shadow-[0_8px_30px_rgb(159,122,234,0.08)] bg-purple-100/20">
           {#if flash}
             <div class="absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-300"></div>
           {/if}
@@ -313,7 +313,7 @@
               <img 
                 src={shot} 
                 alt="Capture {i + 1}" 
-                class="w-full h-full object-cover rounded-2xl md:rounded-3xl shadow-[0_15px_40px_rgba(159,122,234,0.1)] border-4 border-white transition-all duration-500 md:group-hover/shot:scale-[1.05] md:group-hover/shot:-rotate-1" 
+                class="w-full h-full object-cover rounded-2xl md:rounded-3xl shadow-[0_15px_40px_rgba(159,122,234,0.12)] border-4 border-white transition-all duration-500 md:group-hover/shot:scale-[1.05] md:group-hover/shot:-rotate-1" 
               />
               
               <!-- Retake overlay - Simplified for mobile (visible by default or on tap) -->
@@ -327,7 +327,7 @@
               </div>
               
               <div class="absolute -top-6 left-0 right-0 text-center">
-                <span class="text-[8px] md:text-[9px] font-bold text-purple-300/60 uppercase tracking-[0.3em]">Photo 0{i + 1}</span>
+                <span class="text-[8px] md:text-[9px] font-bold text-purple-300 uppercase tracking-[0.3em]">Photo 0{i + 1}</span>
               </div>
             </div>
           {/each}
@@ -340,16 +340,16 @@
       {#if !reviewing}
         <div class="flex flex-col items-center gap-4">
           <button
-            class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-50 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-100 disabled:opacity-30 disabled:scale-100 shadow-sm"
+            class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-100 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-200 disabled:opacity-30 disabled:scale-100 shadow-sm"
             on:click={handleTrigger}
             disabled={busy}
           >
-            <div class="w-full h-full rounded-full bg-purple-50/50 flex items-center justify-center group border border-purple-100">
-              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-400 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>
+            <div class="w-full h-full rounded-full bg-purple-200/20 flex items-center justify-center group border border-purple-200/50">
+              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-500 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>
             </div>
           </button>
           
-          <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-200">
+          <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-300">
             {#if busy && layout?.timer !== 0}
               Capture in progress
             {:else if swappingIndex !== null}
@@ -365,7 +365,7 @@
         <div class="flex flex-col items-center gap-6 md:gap-8">
           <div class="flex flex-col md:flex-row gap-3 md:gap-4 px-6 w-full md:w-auto">
             <button
-              class="w-full md:w-auto px-10 py-3.5 md:py-4 rounded-full border border-purple-100 text-purple-300 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-50 hover:text-purple-500 transition-all active:scale-95"
+              class="w-full md:w-auto px-10 py-3.5 md:py-4 rounded-full border border-purple-200 text-purple-400 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-100/50 hover:text-purple-600 transition-all active:scale-95"
               on:click={retake}
             >
               Retake All
@@ -377,7 +377,7 @@
               Continue to Edit
             </button>
           </div>
-          <p class="text-[9px] md:text-[10px] font-bold text-purple-200 uppercase tracking-[0.3em]">Tap a photo to swap or proceed</p>
+          <p class="text-[9px] md:text-[10px] font-bold text-purple-300 uppercase tracking-[0.3em]">Tap a photo to swap or proceed</p>
         </div>
       {/if}
     </div>

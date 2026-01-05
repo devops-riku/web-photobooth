@@ -3,10 +3,10 @@
   import { goto } from '$app/navigation';
 </script>
 
-<div class="min-h-screen bg-white flex flex-col items-center relative overflow-hidden selection:bg-purple-100">
+<div class="min-h-screen bg-[#f8f2ff] flex flex-col items-center relative overflow-hidden selection:bg-purple-200">
   <!-- Subtle Decorative Accents (Minimalist) -->
-  <div class="absolute -top-24 -left-24 w-80 h-80 bg-purple-50/50 rounded-full blur-[120px]"></div>
-  <div class="absolute bottom-1/4 -right-24 w-64 h-64 bg-purple-50/30 rounded-full blur-[100px]"></div>
+  <div class="absolute -top-24 -left-24 w-80 h-80 bg-purple-200/30 rounded-full blur-[120px]"></div>
+  <div class="absolute bottom-1/4 -right-24 w-64 h-64 bg-purple-200/20 rounded-full blur-[100px]"></div>
 
   <!-- Main Content -->
   <main class="relative z-10 w-full max-w-5xl px-8 flex flex-col items-center pt-24 pb-40">

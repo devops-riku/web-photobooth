@@ -7,25 +7,25 @@
 
 @layer base {
     :root {
-        --primary-50: #faf5ff;
-        --primary-100: #f3e8ff;
-        --primary-200: #e9d5ff;
-        --primary-300: #d8b4fe;
-        --primary-400: #c084fc;
-        --primary-500: #a855f7;
-        --primary-600: #9333ea;
-        --primary-700: #7e22ce;
-        --primary-800: #6b21a8;
-        --primary-900: #581c87;
+        --primary-50: #f5ebff;
+        --primary-100: #ebdbff;
+        --primary-200: #dcc2ff;
+        --primary-300: #cb99ff;
+        --primary-400: #b170ff;
+        --primary-500: #9333ea;
+        --primary-600: #7e22ce;
+        --primary-700: #6b21a8;
+        --primary-800: #581c87;
+        --primary-900: #441569;
 
-        /* Pastel overrides */
-        --pastel-purple: #f8f4ff;
-        --ui-purple: #f3ebff;
-        --border-purple: #e9d8fd;
+        /* Pastel overrides - a bit more presence */
+        --pastel-purple: #f0e6ff;
+        --ui-purple: #e6d1ff;
+        --border-purple: #d8bcff;
     }
 
     body {
-        @apply bg-[#fdfaff] text-slate-700 font-sans antialiased;
+        @apply bg-[#f8f2ff] text-slate-700 font-sans antialiased;
     }
 }
 
