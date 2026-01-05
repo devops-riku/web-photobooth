@@ -21,6 +21,7 @@
   let captionSize = PREVIEW_SETTINGS.DEFAULT_CAPTION_SIZE;
   let font = PREVIEW_SETTINGS.DEFAULT_FONT;
   let stripColor = PREVIEW_SETTINGS.STRIP_BG_COLOR;
+  let roundedCorners = true;
 
   // Global State
   let previewUrl: string | null = null;
@@ -108,7 +109,6 @@
       const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
       const bottomIn = bottomPx / dpi;
 
-      // 4. Build the final strip canvas
       const canvas = await renderStripCanvas(
         shots,
         layout.count,
@@ -116,7 +116,8 @@
         filter,
         topIn,
         bottomIn,
-        stripColor
+        stripColor,
+        roundedCorners
       );
 
       const ctx = canvas.getContext('2d');
@@ -245,7 +246,7 @@
       const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
       const bottomIn = bottomPx / dpi;
 
-      const canvas = await renderStripCanvas(shots, (layout as any).count, dpi, filter, topIn, bottomIn, stripColor);
+      const canvas = await renderStripCanvas(shots, (layout as any).count, dpi, filter, topIn, bottomIn, stripColor, roundedCorners);
       const ctx = canvas.getContext('2d')!;
       const fullLayout = computeStripLayout((layout as any).count, dpi, topIn, bottomIn);
       const logoW = logoRatio * brandHeight;
@@ -299,7 +300,7 @@
         ...s,
         finalStrip: finalOutput,
         uploadedId: finalId,
-        settings: { filter, stripColor, caption, captionSize, font }
+        settings: { filter, stripColor, caption, captionSize, font, roundedCorners }
       }));
 
       // If guest, we should pass info to save page or handle there
@@ -481,8 +482,24 @@
               <div class="w-3 h-3 bg-white rounded-full shadow-sm"></div>
             </button>
           </div>
+        </section>
 
-          {#if showColorWheel}
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-[10px] font-bold uppercase text-purple-400 tracking-[0.2em]">Photo Style</h2>
+          </div>
+          <button 
+            class="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-purple-200 transition-all group"
+            on:click={() => { roundedCorners = !roundedCorners; updatePreview(); }}
+          >
+            <span class="text-xs font-medium text-slate-600">Rounded Corners</span>
+            <div class="w-10 h-5 rounded-full relative transition-colors {roundedCorners ? 'bg-purple-500' : 'bg-slate-200'}">
+              <div class="absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform {roundedCorners ? 'translate-x-5' : 'translate-x-0'}"></div>
+            </div>
+          </button>
+        </section>
+
+        {#if showColorWheel}
             <div class="mt-4 p-4 bg-purple-50/50 rounded-3xl border border-purple-100 flex justify-center animate-in slide-in-from-top-2 duration-300">
               <ColorWheel 
                 bind:value={stripColor}
@@ -490,7 +507,6 @@
               />
             </div>
           {/if}
-        </section>
 
         <section>
           <h2 class="text-[10px] font-bold uppercase text-purple-300 tracking-[0.2em] mb-6">Typography</h2>

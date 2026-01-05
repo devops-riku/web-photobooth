@@ -8,7 +8,8 @@ export async function renderStripCanvas(
     filter = 'none',
     topIn = 0.6,
     bottomIn = 0.8,
-    bgColor = '#ffffff'
+    bgColor = '#ffffff',
+    roundedCorners = true
 ): Promise<HTMLCanvasElement> {
     const layout = computeStripLayout(photoCount, dpi, topIn, bottomIn);
 
@@ -63,27 +64,29 @@ export async function renderStripCanvas(
             filteredPhoto = await applyGLFXFilter(photoCanvas, filter);
         }
 
-        // 4. Draw onto main strip with rounded corners
+        // 4. Draw onto main strip with optional rounded corners
         ctx.save();
-        const radius = Math.floor(dpi * 0.05); // Subtle rounding
 
-        ctx.beginPath();
         const px = layout.contentX;
         const py = y;
         const pw = layout.contentWidthPx;
         const ph = layout.photoHeightPx;
 
-        ctx.moveTo(px + radius, py);
-        ctx.lineTo(px + pw - radius, py);
-        ctx.quadraticCurveTo(px + pw, py, px + pw, py + radius);
-        ctx.lineTo(px + pw, py + ph - radius);
-        ctx.quadraticCurveTo(px + pw, py + ph, px + pw - radius, py + ph);
-        ctx.lineTo(px + radius, py + ph);
-        ctx.quadraticCurveTo(px, py + ph, px, py + ph - radius);
-        ctx.lineTo(px, py + radius);
-        ctx.quadraticCurveTo(px, py, px + radius, py);
-        ctx.closePath();
-        ctx.clip();
+        if (roundedCorners) {
+            const radius = Math.floor(dpi * 0.05); // Subtle rounding
+            ctx.beginPath();
+            ctx.moveTo(px + radius, py);
+            ctx.lineTo(px + pw - radius, py);
+            ctx.quadraticCurveTo(px + pw, py, px + pw, py + radius);
+            ctx.lineTo(px + pw, py + ph - radius);
+            ctx.quadraticCurveTo(px + pw, py + ph, px + pw - radius, py + ph);
+            ctx.lineTo(px + radius, py + ph);
+            ctx.quadraticCurveTo(px, py + ph, px, py + ph - radius);
+            ctx.lineTo(px, py + radius);
+            ctx.quadraticCurveTo(px, py, px + radius, py);
+            ctx.closePath();
+            ctx.clip();
+        }
 
         ctx.drawImage(
             filteredPhoto,
