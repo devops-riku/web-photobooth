@@ -177,6 +177,46 @@
         alert(`Deleted ${deletedIds.length} memories. Some failed to delete.`);
     }
   }
+
+  // --- Long Press Logic ---
+  let longPressTimer: any;
+  let isLongPress = false;
+
+  function handleTouchStart(id: number) {
+    isLongPress = false;
+    longPressTimer = setTimeout(() => {
+      isLongPress = true;
+      // Trigger selection mode if not active
+      if (!isSelectMode) {
+        isSelectMode = true;
+        selectedIds.clear();
+        selectedIds.add(id);
+        selectedIds = selectedIds;
+      } else {
+        toggleSelection(id);
+      }
+      // Vibrate if supported
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+  }
+
+  function handleTouchEnd() {
+    clearTimeout(longPressTimer);
+  }
+
+  function handleTouchMove() {
+    clearTimeout(longPressTimer);
+  }
+
+  function handleThumbnailClick(strip: Strip) {
+    if (isLongPress) return; // Ignore click if long press triggered
+    
+    if (isSelectMode) {
+        toggleSelection(strip.id);
+    } else {
+        openViewModal(strip);
+    }
+  }
 </script>
 
 <div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full">
@@ -225,7 +265,7 @@
         {/if}
         <button 
           on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
-          class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors"
+          class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors whitespace-nowrap"
         >
           Sign Out
         </button>
@@ -241,10 +281,12 @@
     <div 
       class="fixed inset-0 z-50 bg-[#f8f2ff] flex flex-col p-6 animate-in slide-in-from-top-4"
     >
-      <div class="flex justify-end mb-8">
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-xl font-light text-purple-900">Menu</h2>
         <button 
           on:click={() => isMenuOpen = false}
-          class="p-2 -mr-2 text-purple-900"
+          class="p-4 -mr-4 text-purple-900 hover:bg-purple-50 rounded-full transition-colors"
+          aria-label="Close menu"
         >
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -302,8 +344,12 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
         {#each strips as strip (strip.id)}
           <button 
-            class="group flex flex-col gap-3 animate-in text-left w-full relative"
-            on:click={() => isSelectMode ? toggleSelection(strip.id) : openViewModal(strip)}
+            class="group flex flex-col gap-3 animate-in text-left w-full relative touch-manipulation"
+            on:click={() => handleThumbnailClick(strip)}
+            on:touchstart={() => handleTouchStart(strip.id)}
+            on:touchend={handleTouchEnd}
+            on:touchmove={handleTouchMove}
+            on:contextmenu|preventDefault
           >
             <!-- Square container for all thumbnails -->
             <div class="relative w-full aspect-square overflow-hidden rounded-2xl bg-white shadow-lg shadow-purple-100/50 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-purple-200/50 ring-1 ring-purple-50">
