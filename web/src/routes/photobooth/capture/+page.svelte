@@ -246,6 +246,78 @@
       shots: [...v.shots, image]
     }));
   }
+
+  let fileInput: HTMLInputElement;
+  let uploadMessage = '';
+  let uploadMessageType: 'success' | 'error' = 'success';
+
+  async function handleFileUpload(e: Event) {
+    const files = (e.target as HTMLInputElement).files;
+    if (!files || files.length === 0) return;
+
+    busy = true;
+    let addedCount = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+      if (shots.length >= maxShots) break;
+
+      const file = files[i];
+      
+      // Strict photo validation
+      if (!file.type.startsWith('image/')) {
+        uploadMessage = `"${file.name}" is not a photo`;
+        uploadMessageType = 'error';
+        continue;
+      }
+
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(r => img.onload = r);
+
+      const ctx = canvas.getContext('2d')!;
+      const size = Math.min(img.width, img.height);
+      canvas.width = size;
+      canvas.height = size;
+
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+
+      ctx.clearRect(0,0,size,size);
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+      
+      const processedShot = canvas.toDataURL('image/png');
+      photoboothStore.update(v => {
+        const newShots = [...v.shots, processedShot];
+        shots = newShots; // Sync local ref for loop check
+        currentShots = newShots.length;
+        return { shots: newShots };
+      });
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      uploadMessage = `Successfully added ${addedCount} photo${addedCount > 1 ? 's' : ''}!`;
+      uploadMessageType = 'success';
+    }
+
+    setTimeout(() => {
+      uploadMessage = '';
+    }, 3000);
+
+    if (shots.length >= maxShots) {
+      shooting = false;
+      reviewing = true;
+    }
+    busy = false;
+    // reset input
+    (e.target as HTMLInputElement).value = '';
+  }
 </script>
 
 <style>
@@ -349,19 +421,50 @@
     <!-- Simple Trigger / Decision Controls -->
     <div class="flex flex-col items-center gap-6 md:gap-8">
       {#if !reviewing}
-        <div class="flex flex-col items-center gap-4">
-          <button
-            class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-100 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-200 disabled:opacity-30 disabled:scale-100 shadow-sm"
-            on:click={handleTrigger}
-            disabled={busy}
-          >
-            <div class="w-full h-full rounded-full bg-purple-200/20 flex items-center justify-center group border border-purple-200/50">
-              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-500 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>
+        <div class="flex flex-col items-center gap-6">
+          <div class="flex items-center gap-12">
+            <!-- Upload Button (New) -->
+            <div class="flex flex-col items-center gap-2">
+              <button 
+                on:click={() => fileInput.click()}
+                disabled={busy}
+                class="w-12 h-12 md:w-14 md:h-14 rounded-full border border-purple-200 flex items-center justify-center text-purple-400 hover:bg-purple-50 transition-all active:scale-95 disabled:opacity-30"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+              </button>
+              <span class="text-[8px] font-bold uppercase tracking-widest text-purple-300">Upload</span>
             </div>
-          </button>
+
+            <!-- Main Trigger -->
+            <button
+              class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-100 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-200 disabled:opacity-30 disabled:scale-100 shadow-sm"
+              on:click={handleTrigger}
+              disabled={busy}
+            >
+              <div class="w-full h-full rounded-full bg-purple-200/20 flex items-center justify-center group border border-purple-200/50">
+                <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-500 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>
+              </div>
+            </button>
+
+            <!-- Spacer for symmetry -->
+            <div class="w-12 h-12 md:w-14 md:h-14 opacity-0 pointer-events-none"></div>
+          </div>
           
-          <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-300">
-            {#if busy && layout?.timer !== 0}
+          <input 
+            type="file" 
+            bind:this={fileInput} 
+            on:change={handleFileUpload} 
+            accept="image/*" 
+            multiple 
+            class="hidden" 
+          />
+
+          <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-300 transition-all">
+            {#if uploadMessage}
+              <span class={uploadMessageType === 'error' ? 'text-red-400' : 'text-purple-500'}>{uploadMessage}</span>
+            {:else if busy && layout?.timer !== 0}
               Capture in progress
             {:else if swappingIndex !== null}
               {layout?.timer > 0 ? 'Start Countdown' : 'Capture Swap'}
