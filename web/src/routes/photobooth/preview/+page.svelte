@@ -177,6 +177,13 @@
   async function onCaptionInput() {
     debouncedUpdate();
   }
+
+  function handleContinue() {
+    if (previewUrl) {
+      photoboothStore.update(s => ({ ...s, finalStrip: previewUrl }));
+      goto('/photobooth/save');
+    }
+  }
 </script>
 
 <div class="h-screen flex flex-col bg-[#f8f2ff] overflow-hidden">
@@ -204,7 +211,7 @@
       </button>
       <button
         class="bg-purple-500 hover:bg-purple-600 text-white px-4 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95 shadow-md shadow-purple-200"
-        on:click={() => goto('/photobooth/save')}
+        on:click={handleContinue}
       >
         Continue
       </button>
