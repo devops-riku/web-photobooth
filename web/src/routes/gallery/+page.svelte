@@ -25,6 +25,8 @@
   let newTitle = '';
   let isUpdating = false;
 
+  let isMenuOpen = false;
+
   onMount(async () => {
     token = localStorage.getItem('sb_token');
     if (!token) {
@@ -119,35 +121,92 @@
   }
 </script>
 
-<div class="min-h-screen bg-[#f8f2ff] flex flex-col p-4 md:p-8">
-  <header class="w-full max-w-6xl mx-auto flex justify-between items-center mb-8 md:mb-12">
-    <button 
-      on:click={() => goto('/photobooth')}
-      class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
-    >
-      <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-      </svg>
-      <span class="text-xs font-bold uppercase tracking-widest">Photobooth</span>
-    </button>
+<div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full">
+  <!-- Responsive Header -->
+  <header class="w-full sticky top-0 z-40 bg-[#f8f2ff]/80 backdrop-blur-md border-b border-purple-100/50 px-4 py-4 md:px-8 md:py-6 flex-shrink-0">
+    <div class="max-w-6xl mx-auto flex justify-between items-center relative">
+      <!-- Mobile Burger -->
+      <button 
+        class="md:hidden p-2 -ml-2 text-purple-900"
+        on:click={() => isMenuOpen = true}
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
 
-    <div class="flex flex-col items-center">
-      <h1 class="text-3xl font-light text-purple-900 tracking-tight">Your Gallery</h1>
-      <div class="flex items-center gap-2 mt-2">
-        <div class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
-        <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300">Member Memories</span>
+      <!-- Desktop Left: Back Button -->
+      <div class="hidden md:block w-32">
+        <button 
+          on:click={() => goto('/photobooth')}
+          class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
+        >
+          <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          <span class="text-xs font-bold uppercase tracking-widest">Photobooth</span>
+        </button>
       </div>
+
+      <!-- Center Title -->
+      <div class="flex flex-col items-center">
+        <h1 class="text-xl md:text-3xl font-light text-purple-900 tracking-tight">Your Gallery</h1>
+        <div class="flex items-center gap-2 mt-1 md:mt-2">
+          <div class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
+          <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300">Member Memories</span>
+        </div>
+      </div>
+      
+      <!-- Desktop Right: Sign Out -->
+      <div class="hidden md:flex w-32 justify-end">
+        <button 
+          on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
+          class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      <!-- Mobile Spacer (balances layout) -->
+      <div class="md:hidden w-8"></div>
     </div>
-    
-    <button 
-      on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
-      class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors"
-    >
-      Sign Out
-    </button>
   </header>
 
-  <main class="w-full max-w-6xl mx-auto flex-grow">
+  <!-- Mobile Menu Overlay -->
+  {#if isMenuOpen}
+    <div 
+      class="fixed inset-0 z-50 bg-[#f8f2ff] flex flex-col p-6 animate-in slide-in-from-top-4"
+    >
+      <div class="flex justify-end mb-8">
+        <button 
+          on:click={() => isMenuOpen = false}
+          class="p-2 -mr-2 text-purple-900"
+        >
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="flex flex-col gap-8 items-center flex-grow justify-center -mt-20">
+        <button 
+          on:click={() => goto('/photobooth')}
+          class="text-3xl font-light text-purple-900 hover:text-purple-600 transition-colors tracking-tight"
+        >
+          Photobooth
+        </button>
+        <div class="w-16 h-px bg-purple-100"></div>
+        <button 
+          on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
+          class="text-3xl font-light text-purple-900 hover:text-purple-600 transition-colors tracking-tight"
+        >
+          Sign Out
+        </button>
+      </nav>
+
+      <div class="text-center pb-8 opacity-50">
+        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400">Wuby Photobooth</p>
+      </div>
+    </div>
+  {/if}
+
+  <main class="w-full max-w-6xl mx-auto flex-grow p-4 md:p-8">
     {#if isLoading}
       <div class="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <div class="w-12 h-12 border-4 border-purple-100 border-t-purple-500 rounded-full animate-spin"></div>
