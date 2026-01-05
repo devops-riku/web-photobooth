@@ -4,6 +4,7 @@
  */
 import logo from '$lib/assets/wuby_logo.png';
 import mascot from '$lib/assets/booth_mascot_pastel.png';
+import sampleQr from '$lib/assets/sample_qr.png';
 
 export const API_CONFIG = {
     // IMPORTANT: relative base URL
@@ -36,6 +37,7 @@ export const BRAND_CONFIG = {
     NAME: 'Wuby',
     LOGO: logo,
     MASCOT: mascot,
+    SAMPLE_QR: sampleQr,
     TAGLINE: 'Digital Memories'
 };
 

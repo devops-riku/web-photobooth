@@ -52,8 +52,8 @@
   onMount(async () => {
     try {
       logoImg = await loadImage(BRAND_CONFIG.LOGO);
-      // Load a placeholder QR for the preview
-      qrImg = await loadImage(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`);
+      // Load the bundled sample QR for the preview
+      qrImg = await loadImage(BRAND_CONFIG.SAMPLE_QR);
     } catch (e) {
       console.error('Failed to pre-load branding:', e);
     }
