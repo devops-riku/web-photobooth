@@ -69,7 +69,7 @@
     clearTimeout(updateTimeout);
     updateTimeout = setTimeout(() => {
       updatePreview();
-    }, 50); // Small delay for smooth feel
+    }, 16); // ~60fps for snappy real-time feel
   }
 
 
