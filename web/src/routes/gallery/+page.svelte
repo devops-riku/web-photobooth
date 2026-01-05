@@ -261,38 +261,39 @@
   <!-- Responsive Header -->
   <header class="w-full sticky top-0 z-40 bg-[#f8f2ff]/80 backdrop-blur-md border-b border-purple-100/50 px-4 py-4 md:px-8 md:py-6 flex-shrink-0">
     <div class="max-w-6xl mx-auto flex justify-between items-center relative">
-      <!-- Mobile Burger -->
-      <button 
-        class="md:hidden p-2 -ml-2 text-purple-900"
-        on:click={() => isMenuOpen = true}
-      >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-
-      <!-- Simplified Back Button (Desktop) -->
-      <div class="hidden md:flex flex-1 shrink-0">
+      <!-- Left: Burger (Mobile) or Exit (Desktop) -->
+      <div class="flex-1 flex items-center">
         <button 
-          on:click={() => goto('/')}
-          class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
+          class="md:hidden p-2 -ml-2 text-purple-900"
+          on:click={() => isMenuOpen = true}
         >
-          <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          <span class="text-[10px] font-bold uppercase tracking-widest">Exit</span>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
+
+        <div class="hidden md:flex">
+          <button 
+            on:click={() => goto('/')}
+            class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
+          >
+            <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Exit</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Center Title -->
-      <div class="flex flex-col items-center">
-        <h1 class="text-xl md:text-3xl font-bold text-purple-900 uppercase tracking-[0.2em]" style="font-family: 'Quicksand', sans-serif">Your Gallery</h1>
+      <!-- Center: Title -->
+      <div class="flex-none flex justify-center px-4">
+        <h1 class="text-xl md:text-3xl font-bold text-purple-900 uppercase tracking-[0.2em] whitespace-nowrap" style="font-family: 'Quicksand', sans-serif">Your Gallery</h1>
       </div>
       
-      <!-- Right: Actions -->
-      <div class="flex flex-1 justify-end items-center gap-2 md:gap-4 shrink-0">
+      <!-- Right: Select Mode & Nav -->
+      <div class="flex-1 flex justify-end items-center gap-2 md:gap-4">
         {#if strips.length > 0}
             <button 
                 on:click={toggleSelectMode}
-                class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-500 hover:text-purple-600 transition-colors bg-white/80 px-4 py-2 rounded-full border border-purple-100 shadow-sm"
+                class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-500 hover:text-purple-600 transition-colors bg-white/80 px-4 py-2 rounded-full border border-purple-100 shadow-sm whitespace-nowrap"
             >
                 {isSelectMode ? 'Cancel' : 'Select'}
             </button>
@@ -308,9 +309,6 @@
             Sign Out
           </button>
         </nav>
-
-        <!-- Mobile Spacer (balances burger) -->
-        <div class="md:hidden w-10"></div>
       </div>
     </div>
   </header>
