@@ -32,18 +32,18 @@
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
 
-      <!-- Logo/Title -->
-      <div class="flex flex-col items-center md:items-start">
-        <h1 class="text-xl md:text-2xl font-light text-purple-900 tracking-tight">Wuby</h1>
-        <div class="hidden md:flex items-center gap-2 mt-1">
-          <div class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
-          <span class="text-[9px] font-bold uppercase tracking-[0.3em] text-purple-300">Digital Memories</span>
+      <!-- Logo/Title (Centered on Mobile) -->
+      <div class="flex flex-col items-center md:items-start flex-1 md:flex-none">
+        <h1 class="text-xl md:text-2xl font-semibold text-purple-900 leading-none" style="font-family: 'Quicksand', sans-serif">Wuby</h1>
+        <div class="flex items-center gap-2 mt-1">
+          <div class="w-1 h-1 rounded-full bg-purple-500 animate-pulse"></div>
+          <span class="text-[8px] font-bold uppercase tracking-[0.3em] text-purple-300">Digital Memories</span>
         </div>
       </div>
 
       <!-- Desktop Nav -->
-      <nav class="hidden md:flex items-center gap-8">
-        <button on:click={() => goto('/gallery')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Gallery</button>
+      <nav class="hidden md:flex items-center gap-8 flex-1 justify-end">
+        <button on:click={() => goto('/gallery')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Your Gallery</button>
         {#if isLoggedIn}
           <button 
             on:click={handleSignOut}
@@ -116,63 +116,72 @@
     </div>
   {/if}
 
-  <!-- Subtle Decorative Accents (Minimalist) -->
-  <div class="absolute -top-24 -left-24 w-80 h-80 bg-purple-200/30 rounded-full blur-[120px]"></div>
-  <div class="absolute bottom-1/4 -right-24 w-64 h-64 bg-purple-200/20 rounded-full blur-[100px]"></div>
+  <!-- Subtle Decorative Accents (More playful blobs) -->
+  <div class="absolute -top-24 -left-24 w-96 h-96 bg-purple-200/40 rounded-full blur-[120px] animate-pulse"></div>
+  <div class="absolute top-1/2 -right-32 w-80 h-80 bg-pink-100/30 rounded-full blur-[100px] animate-pulse duration-[7000ms]"></div>
+  <div class="absolute bottom-1/4 -left-24 w-64 h-64 bg-purple-100/30 rounded-full blur-[100px]"></div>
 
   <!-- Main Content -->
-  <main class="relative z-10 w-full max-w-5xl px-8 flex flex-col items-center pt-12 pb-40">
+  <main class="relative z-10 w-full max-w-5xl mx-auto px-8 flex-1 flex flex-col items-center justify-center py-8">
     <!-- Hero Section -->
-    <div class="flex flex-col items-center text-center mb-40">
-      <!-- Minimalist Mascot -->
-      <div class="relative w-48 h-48 md:w-56 md:h-56 mb-12">
-        <div class="absolute inset-0 bg-purple-50 rounded-full blur-3xl opacity-60"></div>
-        <img 
-          src="/booth_mascot_pastel.png" 
-          alt="Wuby" 
-          class="w-full h-full object-contain drop-shadow-[0_10px_30px_rgba(159,122,234,0.15)] animate-float"
-        />
+    <div class="flex flex-col items-center text-center">
+      <!-- Minimalist Mascot with Square Frame -->
+      <div class="relative w-48 md:w-64 aspect-square mb-12">
+        <div class="absolute inset-0 bg-purple-100/40 rounded-full blur-3xl opacity-60 scale-125"></div>
+        
+        <!-- Floating Sparkles -->
+        <span class="absolute -top-6 -right-6 text-2xl animate-float duration-[3s] drop-shadow-sm z-20">✨</span>
+        <span class="absolute top-1/2 -left-12 text-xl animate-float duration-[4s] delay-700 drop-shadow-sm z-20">⭐</span>
+        <span class="absolute -bottom-6 right-10 text-2xl animate-float duration-[3.5s] delay-300 drop-shadow-sm z-20">💖</span>
+        
+        <!-- The Perfect Square Frame -->
+        <div class="w-full h-full bg-white rounded-3xl p-8 shadow-xl shadow-purple-200/50 border border-purple-50 relative z-10 overflow-hidden flex items-center justify-center animate-float aspect-square">
+          <img 
+            src="/booth_mascot_pastel.png" 
+            alt="Wuby" 
+            class="w-full h-full object-contain"
+          />
+        </div>
       </div>
 
       <div class="max-w-2xl px-4">
-        <h1 class="text-4xl md:text-5xl font-medium text-purple-900/80 leading-[1.2] mb-6 tracking-tight">
+        <h1 class="text-3xl md:text-5xl font-bold text-purple-900/80 leading-[1.2] mb-6" style="font-family: 'Quicksand', sans-serif">
           {HOME_SETTINGS.HERO_TITLE}
         </h1>
         
-        <p class="text-[15px] md:text-[16px] text-purple-400 leading-relaxed mb-10 max-w-lg mx-auto">
+        <p class="text-[14px] md:text-[16px] text-purple-400 leading-relaxed mb-8 max-w-lg mx-auto">
           {HOME_SETTINGS.HERO_SUBTITLE}
         </p>
         
-        <div class="flex flex-wrap justify-center gap-4">
+        <div class="flex flex-col items-center gap-6">
+          <p class="text-[9px] font-bold text-purple-300 uppercase tracking-[0.4em] animate-pulse">Ready to smile? ✨</p>
           <button 
-            class="px-8 py-2.5 rounded-full bg-purple-500 text-white text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:bg-purple-600 active:scale-95 shadow-lg shadow-purple-100"
+            class="px-12 py-4 rounded-full bg-purple-500 text-white text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:bg-purple-600 hover:scale-105 active:scale-95 shadow-xl shadow-purple-200 group relative"
             on:click={() => goto('/photobooth')}
           >
-            {HOME_SETTINGS.CTA_TEXT}
-          </button>
-          
-          <button class="px-8 py-2.5 rounded-full border border-purple-100 text-purple-300 text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-50 transition-all">
-            See Gallery
+            <span class="relative z-10">{HOME_SETTINGS.CTA_TEXT}</span>
+            <div class="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </button>
         </div>
       </div>
     </div>
-
   </main>
   
   <!-- Minimalist Footer -->
-  <footer class="mt-auto w-full py-10 px-8 flex flex-col md:flex-row justify-between items-center gap-6 border-t border-purple-50/50">
-    <div class="flex items-center gap-2">
-      <div class="w-1.5 h-1.5 rounded-full bg-purple-200"></div>
-      <span class="text-[9px] font-bold text-purple-200 uppercase tracking-widest leading-none">&copy; 2026 {HOME_SETTINGS.HERO_TITLE}</span>
-    </div>
-    
-    <div class="flex gap-10">
-      {#each ['Instagram', 'Documentation', 'Contact'] as link}
-        <a href="#" class="text-[9px] font-bold text-purple-200 uppercase tracking-widest hover:text-purple-400 transition-colors">
-          {link}
-        </a>
-      {/each}
+  <footer class="w-full border-t border-purple-50/50 flex-shrink-0">
+    <div class="max-w-5xl mx-auto py-10 px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-2">
+        <div class="w-1.5 h-1.5 rounded-full bg-purple-200"></div>
+        <span class="text-[9px] font-bold text-purple-200 uppercase tracking-widest leading-none">&copy; 2026 {HOME_SETTINGS.HERO_TITLE}</span>
+      </div>
+      
+      <div class="flex gap-10">
+        {#each ['Instagram', 'Documentation', 'Contact'] as link}
+          <a href="#" class="text-[9px] font-bold text-purple-200 uppercase tracking-widest hover:text-purple-400 transition-colors">
+            {link}
+          </a>
+        {/each}
+      </div>
     </div>
   </footer>
 </div>

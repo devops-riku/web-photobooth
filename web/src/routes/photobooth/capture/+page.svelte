@@ -523,6 +523,7 @@
                 on:click={() => fileInput.click()}
                 disabled={busy}
                 class="w-12 h-12 md:w-14 md:h-14 rounded-full border border-purple-200 flex items-center justify-center text-purple-400 hover:bg-purple-50 transition-all active:scale-95 disabled:opacity-30"
+                aria-label="Upload photo"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -536,6 +537,7 @@
               class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-100 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-200 disabled:opacity-30 disabled:scale-100 shadow-sm"
               on:click={handleTrigger}
               disabled={busy}
+              aria-label="Capture photo"
             >
               <div class="w-full h-full rounded-full bg-purple-200/20 flex items-center justify-center group border border-purple-200/50">
                 <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-500 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>

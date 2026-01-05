@@ -29,7 +29,10 @@
   let selectedIds = new Set<number>();
   let isDeletingBatch = false;
 
-  let isMenuOpen = false;
+  // Delete Confirmation State
+  let showDeleteConfirm = false;
+  let deleteMode: 'single' | 'batch' | null = null;
+  let idToDelete: number | null = null;
 
   onMount(async () => {
     token = localStorage.getItem('sb_token');
@@ -59,9 +62,33 @@
     }
   }
 
-  async function deleteStrip(id: number) {
-    if (!confirm('Are you sure you want to delete this memory?')) return;
+  function confirmDelete(id: number) {
+    deleteMode = 'single';
+    idToDelete = id;
+    showDeleteConfirm = true;
+  }
 
+  function confirmDeleteSelected() {
+    if (selectedIds.size === 0) return;
+    deleteMode = 'batch';
+    showDeleteConfirm = true;
+  }
+
+  async function executeDelete() {
+    if (!deleteMode) return;
+    
+    if (deleteMode === 'single' && idToDelete !== null) {
+      await performSingleDelete(idToDelete);
+    } else if (deleteMode === 'batch') {
+      await performBatchDelete();
+    }
+    
+    showDeleteConfirm = false;
+    deleteMode = null;
+    idToDelete = null;
+  }
+
+  async function performSingleDelete(id: number) {
     try {
       const response = await fetch(getApiUrl('STRIP_DETAIL', id), {
         method: 'DELETE',
@@ -139,9 +166,8 @@
     selectedIds = selectedIds; // Trigger reactivity
   }
 
-  async function deleteSelected() {
+  async function performBatchDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} memories? This cannot be undone.`)) return;
 
     isDeletingBatch = true;
     const idsToDelete = Array.from(selectedIds);
@@ -227,50 +253,37 @@
   <!-- Responsive Header -->
   <header class="w-full sticky top-0 z-40 bg-[#f8f2ff]/80 backdrop-blur-md border-b border-purple-100/50 px-4 py-4 md:px-8 md:py-6 flex-shrink-0">
     <div class="max-w-6xl mx-auto flex justify-between items-center relative">
-      <!-- Mobile Burger -->
-      <button 
-        class="md:hidden p-2 -ml-2 text-purple-900"
-        on:click={() => isMenuOpen = true}
-        aria-label="Open menu"
-      >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-
-      <!-- Desktop Left: Back Button -->
-      <div class="hidden md:block w-32">
+      <!-- Simplified Back Button -->
+      <div class="flex-1 shrink-0">
         <button 
-          on:click={() => goto('/photobooth')}
+          on:click={() => goto('/')}
           class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
         >
           <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
           </svg>
-          <span class="text-xs font-bold uppercase tracking-widest">Photobooth</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest hidden md:inline">Exit</span>
         </button>
       </div>
 
       <!-- Center Title -->
       <div class="flex flex-col items-center">
-        <h1 class="text-xl md:text-3xl font-light text-purple-900 tracking-tight">Your Gallery</h1>
-        <div class="flex items-center gap-2 mt-1 md:mt-2">
-          <div class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
-          <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300">Member Memories</span>
-        </div>
+        <h1 class="text-xl md:text-3xl font-bold text-purple-900 uppercase tracking-[0.2em]" style="font-family: 'Quicksand', sans-serif">Your Gallery</h1>
       </div>
       
-      <!-- Desktop Right: Sign Out -->
-      <div class="hidden md:flex w-32 justify-end items-center gap-4">
+      <!-- Right: Actions -->
+      <div class="flex flex-1 justify-end items-center gap-2 md:gap-4 shrink-0">
         {#if strips.length > 0}
             <button 
                 on:click={toggleSelectMode}
-                class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors"
+                class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors bg-white/50 px-3 py-2 rounded-full border border-purple-50 md:border-none md:bg-transparent"
             >
                 {isSelectMode ? 'Cancel' : 'Select'}
             </button>
         {/if}
         <button 
           on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
-          class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors whitespace-nowrap"
+          class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors whitespace-nowrap bg-white/50 px-3 py-2 rounded-full border border-purple-50 md:border-none md:bg-transparent"
         >
           Sign Out
         </button>
@@ -280,44 +293,6 @@
       <div class="md:hidden w-8"></div>
     </div>
   </header>
-
-  <!-- Mobile Menu Overlay -->
-  {#if isMenuOpen}
-    <div 
-      class="fixed inset-0 z-50 bg-[#f8f2ff] flex flex-col p-6 animate-in slide-in-from-top-4"
-    >
-      <div class="flex justify-between items-center mb-8">
-        <h2 class="text-xl font-light text-purple-900">Menu</h2>
-        <button 
-          on:click={() => isMenuOpen = false}
-          class="p-4 -mr-4 text-purple-900 hover:bg-purple-50 rounded-full transition-colors"
-          aria-label="Close menu"
-        >
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <nav class="flex flex-col gap-8 items-center flex-grow justify-center -mt-20">
-        <button 
-          on:click={() => goto('/photobooth')}
-          class="text-3xl font-light text-purple-900 hover:text-purple-600 transition-colors tracking-tight"
-        >
-          Photobooth
-        </button>
-        <div class="w-16 h-px bg-purple-100"></div>
-        <button 
-          on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
-          class="text-3xl font-light text-purple-900 hover:text-purple-600 transition-colors tracking-tight"
-        >
-          Sign Out
-        </button>
-      </nav>
-
-      <div class="text-center pb-8 opacity-50">
-        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400">Wuby Photobooth</p>
-      </div>
-    </div>
-  {/if}
 
   <main class="w-full max-w-6xl mx-auto flex-grow p-4 md:p-8">
     {#if isLoading}
@@ -394,7 +369,7 @@
   {#if isSelectMode && selectedIds.size > 0}
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
         <button 
-            on:click={deleteSelected}
+            on:click={confirmDeleteSelected}
             disabled={isDeletingBatch}
             class="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center gap-3 disabled:opacity-50"
         >
@@ -456,7 +431,7 @@
                 Rename
               </button>
               <button 
-                on:click={() => deleteStrip(viewingStrip!.id)}
+                on:click={() => confirmDelete(viewingStrip!.id)}
                 class="px-6 py-3 bg-red-500/20 hover:bg-red-500/40 text-red-200 hover:text-white rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md transition-all flex items-center gap-2"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -509,6 +484,44 @@
               {isUpdating ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Delete Confirmation Modal -->
+  {#if showDeleteConfirm}
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-purple-900/60 backdrop-blur-md animate-in fade-in">
+      <div class="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-8 border border-purple-50 text-center">
+        <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </div>
+        
+        <h2 class="text-xl font-light text-purple-900 mb-2">Delete {deleteMode === 'batch' ? 'Memories' : 'Memory'}?</h2>
+        <p class="text-sm text-purple-400 mb-8 leading-relaxed">
+          {#if deleteMode === 'batch'}
+            Are you sure you want to delete {selectedIds.size} selected items?
+          {:else}
+            Are you sure you want to delete this memory?
+          {/if}
+          <br>This action cannot be undone.
+        </p>
+
+        <div class="flex items-center gap-3">
+          <button 
+            on:click={() => showDeleteConfirm = false}
+            class="flex-grow bg-purple-50 text-purple-400 font-bold py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-purple-100 transition-all outline-none"
+          >
+            Cancel
+          </button>
+          <button 
+            on:click={executeDelete}
+            class="flex-grow bg-red-500 text-white font-bold py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-200 outline-none"
+          >
+            Confirm Delete
+          </button>
         </div>
       </div>
     </div>
