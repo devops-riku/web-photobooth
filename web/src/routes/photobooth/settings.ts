@@ -3,4 +3,6 @@ export const BOOTH_SETTINGS = {
     LAYOUT_OPTIONS: [2, 3, 4],
     BRAND_NAME: 'Wuby',
     ASPECT_RATIO: 1.5, // classic booth ratio (width to height of each frame segment)
+    TIMER_OPTIONS: [0, 3, 10],
+    DEFAULT_TIMER: 3,
 };

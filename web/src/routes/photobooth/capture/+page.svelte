@@ -8,13 +8,15 @@
   let video: HTMLVideoElement;
   let canvas: HTMLCanvasElement;
 
-  let countdown = CAPTURE_SETTINGS.COUNTDOWN_DURATION;
+  let countdown = 3; // Default, will be sync'd with layout
   let shooting = false;
   let reviewing = false;
   let flash = false;
   let currentReviewIndex = 0;
   let maxShots = 0;
   let currentShots = 0;
+  let swappingIndex: number | null = null;
+  let busy = false;
 
   let layout: any = null;
   let shots: string[] = [];
@@ -23,6 +25,7 @@
   layoutStore.subscribe(v => {
     layout = v;
     maxShots = v?.count ?? 0;
+    if (v) countdown = v.timer;
   });
 
   photoboothStore.subscribe(v => {
@@ -58,14 +61,64 @@
     }
   }
 
+  function waitForVideo(): Promise<void> {
+    return new Promise((resolve) => {
+      if (video && video.readyState >= 2) return resolve();
+      const check = setInterval(() => {
+        if (video && video.readyState >= 2) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 50);
+    });
+  }
+
+  async function handleTrigger() {
+    if (reviewing || busy) return;
+
+    if (swappingIndex !== null) {
+      busy = true;
+      await runCountdown();
+      captureInternal(swappingIndex);
+      swappingIndex = null;
+      shooting = false;
+      reviewing = true;
+      busy = false;
+      return;
+    }
+
+    if (layout?.timer === 0) {
+      if (!shooting) {
+        shooting = true;
+        currentShots = 0;
+        photoboothStore.set({ shots: [] });
+        await tick();
+        await waitForVideo();
+      }
+
+      capture();
+      currentShots++;
+
+      if (currentShots >= maxShots) {
+        shooting = false;
+        reviewing = true;
+      }
+    } else {
+      await startSequence();
+    }
+  }
+
   async function startSequence() {
-    if (shooting || reviewing) return;
+    if (shooting || reviewing || busy) return;
+    busy = true;
     shooting = true;
     reviewing = false;
     currentShots = 0;
     
     // Clear previous shots
     photoboothStore.set({ shots: [] });
+    await tick();
+    await waitForVideo();
 
     while (currentShots < maxShots) {
       await runCountdown();
@@ -75,16 +128,19 @@
 
     shooting = false;
     reviewing = true;
+    busy = false;
   }
 
   async function retakeSingle(index: number) {
     reviewing = false;
     await tick();
     shooting = true;
-    
-    await runCountdown();
-    
-    // Flash effect
+    await waitForVideo();
+    swappingIndex = index;
+  }
+
+  function captureInternal(index: number) {
+     // Flash effect
     flash = true;
     setTimeout(() => flash = false, CAPTURE_SETTINGS.FLASH_DURATION_MS);
 
@@ -103,9 +159,6 @@
       newShots[index] = image;
       return { shots: newShots };
     });
-
-    shooting = false;
-    reviewing = true;
   }
 
   async function retake() {
@@ -113,6 +166,9 @@
     await tick();
     currentShots = 0;
     photoboothStore.set({ shots: [] });
+    shooting = false;
+    swappingIndex = null;
+    busy = false;
   }
 
   function proceed() {
@@ -122,10 +178,16 @@
 
   function runCountdown() {
     return new Promise<void>((resolve) => {
-      countdown = CAPTURE_SETTINGS.COUNTDOWN_DURATION;
+      if (layout.timer === 0) {
+        countdown = 0;
+        resolve();
+        return;
+      }
+
+      countdown = layout.timer;
       const interval = setInterval(() => {
         countdown--;
-        if (countdown === 0) {
+        if (countdown <= 0) {
           clearInterval(interval);
           resolve();
         }
@@ -134,9 +196,9 @@
   }
 
   function capture() {
-    // Flash effect
+     // Flash effect
     flash = true;
-    setTimeout(() => flash = false, 100);
+    setTimeout(() => flash = false, CAPTURE_SETTINGS.FLASH_DURATION_MS);
 
     const ctx = canvas.getContext('2d')!;
     
@@ -257,19 +319,23 @@
         <div class="flex flex-col items-center gap-4">
           <button
             class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-purple-50 p-1 md:p-1.5 transition-all active:scale-90 hover:border-purple-100 disabled:opacity-30 disabled:scale-100 shadow-sm"
-            on:click={startSequence}
-            disabled={shooting}
+            on:click={handleTrigger}
+            disabled={busy}
           >
             <div class="w-full h-full rounded-full bg-purple-50/50 flex items-center justify-center group border border-purple-100">
-              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-400 {shooting ? 'animate-ping' : ''}"></div>
+              <div class="w-3 h-3 md:w-4 md:h-4 rounded-full bg-purple-400 {busy && layout?.timer !== 0 ? 'animate-ping' : ''}"></div>
             </div>
           </button>
           
           <p class="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase text-purple-200">
-            {#if shooting}
+            {#if busy && layout?.timer !== 0}
               Capture in progress
+            {:else if swappingIndex !== null}
+              {layout?.timer > 0 ? 'Start Countdown' : 'Capture Swap'}
+            {:else if shooting && layout?.timer === 0}
+              Capture {currentShots + 1} of {maxShots}
             {:else}
-              Start Sequence
+              {layout?.timer === 0 ? 'Capture First Shot' : 'Start Sequence'}
             {/if}
           </p>
         </div>
