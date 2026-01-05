@@ -35,7 +35,23 @@
   }
 </script>
 
-<div class="min-h-screen flex flex-col items-center justify-center p-6 bg-[#f8f2ff] overflow-hidden">
+<div class="min-h-screen flex flex-col items-center justify-center p-6 bg-[#f8f2ff] relative overflow-hidden">
+  <!-- Brand Back Button -->
+  <button 
+    on:click={() => goto('/')}
+    class="absolute top-6 left-6 md:top-10 md:left-10 text-purple-400 hover:text-purple-600 transition-all flex items-center gap-3 group z-50"
+  >
+    <div class="w-10 h-10 rounded-full bg-white/80 backdrop-blur-md border border-purple-100 flex items-center justify-center group-hover:bg-white shadow-sm group-hover:shadow-md transition-all duration-300">
+      <svg class="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-[9px] font-bold uppercase tracking-[0.3em] leading-none">Exit</span>
+      <span class="text-[7px] text-purple-300 font-bold uppercase tracking-[0.2em] mt-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300">Back to Home</span>
+    </div>
+  </button>
+
   <div class="text-center mb-12">
     <h1 class="text-4xl font-medium tracking-tight text-purple-900/80 mb-3">{BOOTH_SETTINGS.BRAND_NAME}</h1>
     <p class="text-purple-400/80 text-sm font-medium tracking-wide font-sans">Setup your session</p>

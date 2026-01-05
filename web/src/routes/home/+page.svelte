@@ -71,12 +71,15 @@
     <div 
       class="fixed inset-0 z-50 bg-[#f8f2ff] flex flex-col p-6 animate-in slide-in-from-top-4"
     >
-      <div class="flex justify-end mb-8">
+      <div class="flex justify-end mb-4 relative z-50">
         <button 
           on:click={() => isMenuOpen = false}
-          class="p-2 -mr-2 text-purple-900"
+          class="p-4 -mr-4 text-purple-900 tap-highlight-transparent active:scale-95 transition-transform"
+          aria-label="Close menu"
         >
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
 
