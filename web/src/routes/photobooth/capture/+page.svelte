@@ -148,10 +148,22 @@
     const size = Math.min(video.videoWidth, video.videoHeight);
     canvas.width = size;
     canvas.height = size;
+
+    ctx.save();
+    
+    // If mirroring is enabled, flip the context
+    if (CAPTURE_SETTINGS.MIRROR_CAPTURE) {
+      ctx.translate(size, 0);
+      ctx.scale(-1, 1);
+    }
+
     const sx = (video.videoWidth - size) / 2;
     const sy = (video.videoHeight - size) / 2;
 
     ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    
+    ctx.restore();
+    
     const image = canvas.toDataURL('image/png');
 
     photoboothStore.update(v => {
@@ -208,6 +220,14 @@
     canvas.width = size;
     canvas.height = size;
 
+    ctx.save();
+
+    // If mirroring is enabled, flip the context
+    if (CAPTURE_SETTINGS.MIRROR_CAPTURE) {
+      ctx.translate(size, 0);
+      ctx.scale(-1, 1);
+    }
+
     // Center crop from the video
     const sx = (video.videoWidth - size) / 2;
     const sy = (video.videoHeight - size) / 2;
@@ -217,6 +237,8 @@
       sx, sy, size, size, // source (centered square)
       0, 0, size, size    // destination
     );
+
+    ctx.restore();
 
     const image = canvas.toDataURL('image/png');
 
