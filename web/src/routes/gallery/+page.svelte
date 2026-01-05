@@ -174,7 +174,7 @@
         </button>
       </div>
     {:else}
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
         {#each strips as strip (strip.id)}
           <button 
             class="group flex flex-col gap-3 animate-in text-left w-full"
@@ -209,22 +209,21 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in p-4 md:p-8"
       on:click|self={() => viewingStrip = null}
     >
-      <div class="relative w-full h-full md:w-auto md:h-auto flex flex-col items-center gap-4 md:gap-6">
+      <div class="relative w-full h-full md:w-auto md:h-auto md:max-h-[90vh] flex flex-col items-center gap-4 md:gap-4">
         <!-- Close Button -->
         <button 
           on:click={() => viewingStrip = null}
-          class="absolute top-4 right-4 md:-top-12 md:-right-12 z-10 p-2 text-white/50 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full md:bg-transparent"
+          class="absolute top-4 right-4 md:top-2 md:right-2 lg:-right-12 lg:-top-0 z-20 p-2 text-white/50 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full md:bg-transparent"
         >
           <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
         <!-- Image Container -->
-        <!-- Image Container -->
-        <div class="relative rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full flex-1 md:flex-none min-h-0 md:h-[80vh]">
+        <div class="relative rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full flex-1 md:flex-none min-h-0 md:h-auto flex items-center justify-center bg-black/50">
           <img 
             src={viewingStrip.file_url} 
             alt={viewingStrip.title} 
-            class="w-full h-full object-contain md:w-auto" 
+            class="w-full h-full object-contain md:w-auto md:h-auto md:max-h-[70vh]" 
           />
         </div>
 

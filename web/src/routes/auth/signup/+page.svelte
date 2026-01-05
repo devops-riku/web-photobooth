@@ -2,6 +2,8 @@
   import { goto } from '$app/navigation';
   import { getApiUrl } from '$lib/config';
 
+  import { page } from '$app/stores';
+
   let username = '';
   let email = '';
   let password = '';
@@ -26,12 +28,13 @@
         message = data.error || 'Signup failed';
         messageType = 'error';
       } else {
-        message = data.message || 'Account created successfully';
+        message = 'Account created! Redirecting to login...';
         messageType = 'success';
         
+        const redirect = $page.url.searchParams.get('redirect');
         setTimeout(() => {
-          goto('/auth/login');
-        }, 2000);
+          goto(redirect ? `/auth/login?redirect=${redirect}` : '/auth/login');
+        }, 1000);
       }
     } catch (e) {
       message = 'An unexpected error occurred';
@@ -120,7 +123,10 @@
     <div class="mt-12 flex flex-col items-center gap-6 animate-in delay-200">
       <p class="text-[10px] font-bold text-purple-300 uppercase tracking-widest">
         Have an account? 
-        <button on:click={() => goto('/auth/login')} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Sign In</button>
+        <button on:click={() => {
+          const redirect = $page.url.searchParams.get('redirect');
+          goto(redirect ? `/auth/login?redirect=${redirect}` : '/auth/login');
+        }} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Sign In</button>
       </p>
       
       <button 

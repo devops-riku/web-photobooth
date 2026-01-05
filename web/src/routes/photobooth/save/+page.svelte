@@ -198,12 +198,11 @@
             {/if}
           </button>
 
-          {#if saveMessage}
             <div class="flex flex-col items-center gap-2 mt-2 animate-in fade-in">
-              <p class="text-[10px] text-center font-bold uppercase tracking-widest {saveMessage.includes('Successfully') ? 'text-green-600' : 'text-red-500'}">
+              <p class="text-[10px] text-center font-bold uppercase tracking-widest {saveMessage.includes('Successfully') || saveMessage.includes('Updated') ? 'text-green-600' : 'text-red-500'}">
                 {saveMessage}
               </p>
-              {#if saveMessage.includes('Successfully')}
+              {#if saveMessage.includes('Successfully') || saveMessage.includes('Updated')}
                 <button 
                   on:click={() => goto('/gallery')}
                   class="text-[10px] font-bold text-purple-600 hover:text-purple-800 underline underline-offset-4 uppercase tracking-widest"
@@ -212,19 +211,25 @@
                 </button>
               {/if}
             </div>
-          {/if}
+
+          <button 
+            on:click={() => { localStorage.removeItem('sb_token'); localStorage.removeItem('sb_user'); location.reload(); }}
+            class="w-full mt-4 text-[10px] font-bold text-purple-300 hover:text-purple-500 uppercase tracking-widest transition-colors py-2"
+          >
+            Sign Out
+          </button>
 
         {:else}
           <!-- Guest State -->
           <div class="grid grid-cols-2 gap-3">
              <button 
-              on:click={() => goto('/auth/login')}
+              on:click={() => goto('/auth/login?redirect=/photobooth/save')}
               class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] text-xs uppercase tracking-wider"
             >
               Log In
             </button>
             <button 
-              on:click={() => goto('/auth/signup')}
+              on:click={() => goto('/auth/signup?redirect=/photobooth/save')}
               class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-purple-200 text-xs uppercase tracking-wider"
             >
               Sign Up

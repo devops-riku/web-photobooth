@@ -2,6 +2,8 @@
   import { goto } from '$app/navigation';
   import { getApiUrl } from '$lib/config';
 
+  import { page } from '$app/stores';
+
   let identifier = '';
   let password = '';
   let isLoading = false;
@@ -35,8 +37,9 @@
             localStorage.setItem('sb_user', data.user.username);
         }
         
+        const redirect = $page.url.searchParams.get('redirect') || '/gallery';
         setTimeout(() => {
-          goto('/gallery');
+          goto(redirect);
         }, 800);
       }
     } catch (e) {
@@ -115,7 +118,10 @@
     <div class="mt-12 flex flex-col items-center gap-6 animate-in delay-200">
       <p class="text-[10px] font-bold text-purple-300 uppercase tracking-widest">
         No account? 
-        <button on:click={() => goto('/auth/signup')} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Join Wuby</button>
+        <button on:click={() => { 
+          const redirect = $page.url.searchParams.get('redirect');
+          goto(redirect ? `/auth/signup?redirect=${redirect}` : '/auth/signup');
+        }} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Join Wuby</button>
       </p>
       
       <button 
