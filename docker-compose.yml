@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-photopass}
       POSTGRES_DB: ${DB_NAME:-photobooth}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,8 +32,6 @@ services:
       DO_SPACES_REGION: ${DO_SPACES_REGION}
       DO_SPACES_BUCKET: ${DO_SPACES_BUCKET}
       GUEST_EXPIRATION_DAYS: 7
-    ports:
-      - "3000:3000"
     restart: always
 
   frontend:
@@ -43,14 +41,24 @@ services:
     depends_on:
       - backend
     environment:
-      PUBLIC_API_URL: http://localhost:3000
+      PUBLIC_API_URL: https://api.wuby.space
       PORT: 5173
-      # CSRF Protection for SvelteKit Node adapter
-      ORIGIN: ${APP_URL:-http://localhost:5173}
+      # CSRF Protection - Allow the production domain
+      ORIGIN: https://wuby.space
+      # Protocol header trust for Nginx proxy
       PROTOCOL_HEADER: x-forwarded-proto
       HOST_HEADER: x-forwarded-host
+    restart: always
+
+  nginx:
+    image: nginx:alpine
     ports:
-      - "5173:5173"
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
     restart: always
 
 volumes:

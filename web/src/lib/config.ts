@@ -4,7 +4,7 @@
  */
 export const API_CONFIG = {
     // Base URL for the Go monolithic backend - Use environment variable or fallback to localhost
-    BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://api.wuby.space',
+    BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
 
     // API Endpoints
     ENDPOINTS: {
@@ -17,7 +17,7 @@ export const API_CONFIG = {
         STRIP_DETAIL: '/api/strips/', // Base for /:id
         SYNC_USER: '/api/auth/sync'
     },
-    APP_URL: import.meta.env.VITE_APP_URL || 'https://wuby.space',
+    APP_URL: import.meta.env.VITE_APP_URL || 'http://localhost:5173',
     // DO Spaces CDN URL - Use environment or default
     DO_SPACES_URL: import.meta.env.VITE_DO_SPACES_URL || 'https://innotekinc.sgp1.cdn.digitaloceanspaces.com'
 };
