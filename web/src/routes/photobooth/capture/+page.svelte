@@ -198,7 +198,7 @@
   <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-6 gap-8 md:gap-12 overflow-hidden bg-white">
     {#if !reviewing}
       <!-- Camera Viewport - Only visible when not reviewing -->
-      <div class="relative w-full max-w-[320px] md:max-w-[420px] aspect-square animate-in zoom-in-95 duration-500">
+      <div class="relative w-full max-w-[320px] md:max-w-[420px] aspect-square">
         <div class="absolute inset-0 video-container rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-purple-50 shadow-[0_8px_30px_rgb(159,122,234,0.05)] bg-purple-50/10">
           {#if flash}
             <div class="absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-300"></div>
@@ -222,7 +222,7 @@
       </div>
     {:else}
       <!-- Sequence Review - Horizontal Lineup (not trapped in a card) -->
-      <div class="w-full flex flex-col items-center gap-6 md:gap-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+      <div class="w-full flex flex-col items-center gap-6 md:gap-10">
         <div class="flex gap-4 md:gap-6 px-6 md:px-12 py-4 overflow-x-auto no-scrollbar snap-x max-w-full">
           {#each shots as shot, i}
             <div class="flex-shrink-0 w-48 md:w-64 aspect-square relative group/shot snap-center">
@@ -274,7 +274,7 @@
           </p>
         </div>
       {:else}
-        <div class="flex flex-col items-center gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+        <div class="flex flex-col items-center gap-6 md:gap-8">
           <div class="flex flex-col md:flex-row gap-3 md:gap-4 px-6 w-full md:w-auto">
             <button
               class="w-full md:w-auto px-10 py-3.5 md:py-4 rounded-full border border-purple-100 text-purple-300 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-purple-50 hover:text-purple-500 transition-all active:scale-95"
