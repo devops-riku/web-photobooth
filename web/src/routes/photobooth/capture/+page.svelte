@@ -55,7 +55,8 @@
     cameraError = null;
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        cameraError = "Camera access unavailable. Make sure you are using a secure (HTTPS) connection.";
+        // Warning: Most modern browsers block this on non-localhost HTTP
+        cameraError = "Camera API not available. On mobile, this usually requires HTTPS (or 'wuby.space').";
         return;
       }
 

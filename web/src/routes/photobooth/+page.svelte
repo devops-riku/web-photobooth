@@ -72,7 +72,7 @@
           </div>
           <p class="text-[10px] text-purple-300/80 italic max-w-[240px] text-center leading-relaxed">
             {#if selectedTimer === 0}
-              Manual mode: Trigger each photo yourself for perfect timing.
+              Manual: Trigger each photo yourself for perfect timing.
             {:else}
               Automatic: We'll count down {selectedTimer}s between each shot.
             {/if}
