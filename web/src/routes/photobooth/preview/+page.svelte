@@ -5,6 +5,7 @@
   import { photoboothStore } from '$lib/stores/photobooth.store';
 
   import { renderStripCanvas } from '$lib/utils/renderStrip';
+  import { computeStripLayout } from '$lib/utils/stripLayout';
   import { applyGLFXFilter } from '$lib/utils/glfxFilters';
   import { PREVIEW_SETTINGS } from './settings';
 
@@ -40,41 +41,104 @@
     error = null;
 
     try {
-      // 1. Build the strip (this now handles square crop + per-photo filter + dynamic height)
+      // 1. Prepare layout basics for calculations
+      const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
+      const initialLayout = computeStripLayout(layout.count, dpi);
+      
+      // 2. Load Brand Assets
+      const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+      const [logo, qr] = await Promise.all([
+        loadImage('/wuby_logo.png'),
+        loadImage('/sample_qr.png')
+      ]);
+
+      const logoRatio = logo.width / logo.height;
+      const qrRatio = qr.width / qr.height;
+      const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
+      const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
+      const brandHeight = logoW_qrW_total / (logoRatio + qrRatio);
+
+      // 3. Calculate dynamic margins based on paddings in settings
+      const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
+      const topIn = topPx / dpi;
+
+      // Caption and timestamp estimated heights for margin calculation
+      const timestampH = 20; // 12px + padding
+      const captionH = captionSize * 1.2; 
+      const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
+      const bottomIn = bottomPx / dpi;
+
+      // 4. Build the final strip canvas
       const canvas = await renderStripCanvas(
         shots,
         layout.count,
-        PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH,
-        filter
+        dpi,
+        filter,
+        topIn,
+        bottomIn
       );
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // ─────────────────────────
-      // TOP BRAND (inside top canvas)
-      // ─────────────────────────
-      ctx.fillStyle = '#a855f7'; // purple-500
-      ctx.textAlign = 'center';
-      ctx.font = '300 42px Outfit, Inter, sans-serif'; // Lighter weight
-      ctx.fillText('Wuby', canvas.width / 2, 130);
+      // Get precise layout results with our dynamic margins
+      const fullLayout = computeStripLayout(layout.count, dpi, topIn, bottomIn);
 
-      // Simple minimalist dot instead of a line
-      ctx.fillStyle = '#f3e8ff'; // purple-100
-      ctx.beginPath();
-      ctx.arc(canvas.width / 2, 160, 4, 0, Math.PI * 2);
-      ctx.fill();
+      // ─────────────────────────
+      // TOP BRAND (Logo + QR)
+      // ─────────────────────────
+      const logoW = logoRatio * brandHeight;
+      const qrW = qrRatio * brandHeight;
+      const brandX = fullLayout.contentX + PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX;
+      const brandY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+
+      ctx.drawImage(logo, brandX, brandY, logoW, brandHeight);
+      ctx.drawImage(qr, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
+
+      // ─────────────────────────
+      // TIMESTAMP (Horizontal)
+      // ─────────────────────────
+      const date = new Date();
+      const timeStr = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: '2-digit', 
+        year: 'numeric' 
+      }).toUpperCase() + " • " + date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).toUpperCase();
+
+      // Position: bottom of last photo + top padding
+      const lastPhotoBottom = fullLayout.topCanvasPx + (fullLayout.photoHeightPx * layout.count) + (fullLayout.gapPx * (layout.count - 1));
+      const timestampY = lastPhotoBottom + PREVIEW_SETTINGS.TIMESTAMP_TOP_PX;
+
+      ctx.fillStyle = PREVIEW_SETTINGS.TIMESTAMP_COLOR;
+      ctx.textAlign = 'center';
+      ctx.font = '700 12px Montserrat, sans-serif'; 
+      ctx.letterSpacing = '2px';
+      ctx.fillText(timeStr, canvas.width / 2, timestampY + 10); // +10 for baseline
 
       // ─────────────────────────
       // BOTTOM CAPTION
       // ─────────────────────────
-      await document.fonts.ready; // Wait for fonts to load
+      await document.fonts.ready;
+      ctx.fillStyle = PREVIEW_SETTINGS.CAPTION_COLOR;
+      ctx.textAlign = 'center';
       ctx.font = `${captionSize}px ${font}, system-ui, sans-serif`;
+      
+      const captionY = timestampY + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX;
+      
       ctx.fillText(
-
         caption || ' ',
         canvas.width / 2,
-        canvas.height - 100
+        captionY + (captionSize * 0.8) // Adjust for baseline
       );
 
 
