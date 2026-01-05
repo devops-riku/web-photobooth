@@ -48,6 +48,10 @@
       goto('/photobooth');
       return;
     }
+    // If we already have shots, show review
+    if (shots.length >= maxShots) {
+      reviewing = true;
+    }
     await initCamera();
   });
 
@@ -114,7 +118,7 @@
       if (!shooting) {
         shooting = true;
         currentShots = 0;
-        photoboothStore.set({ shots: [] });
+        photoboothStore.update(v => ({ ...v, shots: [] }));
         await tick();
         await waitForVideo();
       }
@@ -139,7 +143,7 @@
     currentShots = 0;
     
     // Clear previous shots
-    photoboothStore.set({ shots: [] });
+    photoboothStore.update(v => ({ ...v, shots: [] }));
     await tick();
     try {
       await waitForVideo();
@@ -205,7 +209,7 @@
     photoboothStore.update(v => {
       const newShots = [...v.shots];
       newShots[index] = image;
-      return { shots: newShots };
+      return { ...v, shots: newShots };
     });
   }
 
@@ -213,7 +217,7 @@
     reviewing = false;
     await tick();
     currentShots = 0;
-    photoboothStore.set({ shots: [] });
+    photoboothStore.update(v => ({ ...v, shots: [] }));
     shooting = false;
     swappingIndex = null;
     busy = false;
@@ -279,6 +283,7 @@
     const image = canvas.toDataURL('image/png');
 
     photoboothStore.update(v => ({
+      ...v,
       shots: [...v.shots, image]
     }));
   }
@@ -287,58 +292,94 @@
   let uploadMessage = '';
   let uploadMessageType: 'success' | 'error' = 'success';
 
+  async function processFile(file: File): Promise<string> {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.readAsDataURL(file);
+    });
+
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise(r => img.onload = r);
+
+    const ctx = canvas.getContext('2d')!;
+    const size = Math.min(img.width, img.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    const sx = (img.width - size) / 2;
+    const sy = (img.height - size) / 2;
+
+    ctx.clearRect(0,0,size,size);
+    ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+    
+    return canvas.toDataURL('image/png');
+  }
+
   async function handleFileUpload(e: Event) {
-    const files = (e.target as HTMLInputElement).files;
+    const input = e.target as HTMLInputElement;
+    const files = input.files;
     if (!files || files.length === 0) return;
 
     busy = true;
     let addedCount = 0;
     
-    for (let i = 0; i < files.length; i++) {
-      if (shots.length >= maxShots) break;
-
-      const file = files[i];
-      
-      // Strict photo validation
-      if (!file.type.startsWith('image/')) {
-        uploadMessage = `"${file.name}" is not a photo`;
+    // If we're swapping, we only handle the first valid file
+    if (swappingIndex !== null) {
+      const file = files[0];
+      if (file && file.type.startsWith('image/')) {
+        try {
+          const processedShot = await processFile(file);
+          photoboothStore.update(v => {
+            const newShots = [...v.shots];
+            newShots[swappingIndex!] = processedShot;
+            shots = newShots;
+            currentShots = newShots.length;
+            return { ...v, shots: newShots };
+          });
+          addedCount = 1;
+          swappingIndex = null;
+        } catch (err) {
+          console.error("Upload process error during swap:", err);
+          uploadMessage = "Failed to process image";
+          uploadMessageType = 'error';
+        }
+      } else if (file) {
+        uploadMessage = "File must be an image";
         uploadMessageType = 'error';
-        continue;
       }
+    } else {
+      // Normal sequential upload
+      for (let i = 0; i < files.length; i++) {
+        if (shots.length >= maxShots) break;
 
-      const dataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
+        const file = files[i];
+        if (!file.type.startsWith('image/')) {
+          uploadMessage = `"${file.name}" is not a photo`;
+          uploadMessageType = 'error';
+          continue;
+        }
 
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise(r => img.onload = r);
-
-      const ctx = canvas.getContext('2d')!;
-      const size = Math.min(img.width, img.height);
-      canvas.width = size;
-      canvas.height = size;
-
-      const sx = (img.width - size) / 2;
-      const sy = (img.height - size) / 2;
-
-      ctx.clearRect(0,0,size,size);
-      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
-      
-      const processedShot = canvas.toDataURL('image/png');
-      photoboothStore.update(v => {
-        const newShots = [...v.shots, processedShot];
-        shots = newShots; // Sync local ref for loop check
-        currentShots = newShots.length;
-        return { shots: newShots };
-      });
-      addedCount++;
+        try {
+          const processedShot = await processFile(file);
+          photoboothStore.update(v => {
+            const newShots = [...v.shots, processedShot];
+            shots = newShots;
+            currentShots = newShots.length;
+            return { ...v, shots: newShots };
+          });
+          addedCount++;
+        } catch (err) {
+          console.error("Upload process error:", err);
+        }
+      }
     }
 
     if (addedCount > 0) {
-      uploadMessage = `Successfully added ${addedCount} photo${addedCount > 1 ? 's' : ''}!`;
+      uploadMessage = swappingIndex === null && addedCount === 1 && shots.length < maxShots 
+        ? "Photo added!" 
+        : `Successfully processed ${addedCount} photo${addedCount > 1 ? 's' : ''}!`;
       uploadMessageType = 'success';
     }
 
@@ -351,8 +392,7 @@
       reviewing = true;
     }
     busy = false;
-    // reset input
-    (e.target as HTMLInputElement).value = '';
+    input.value = '';
   }
 </script>
 

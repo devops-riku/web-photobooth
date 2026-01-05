@@ -340,7 +340,10 @@
 
       <button
         class="border border-purple-200 hover:bg-purple-100/50 text-purple-500 px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95 disabled:opacity-30"
-        on:click={() => goto('/photobooth/capture')}
+        on:click={() => {
+          photoboothStore.update(s => ({ ...s, shots: [] }));
+          goto('/photobooth/capture');
+        }}
         disabled={isUploading}
       >
         Retake
