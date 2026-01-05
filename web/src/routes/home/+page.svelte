@@ -2,6 +2,7 @@
   import { HOME_SETTINGS } from './settings';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { BRAND_CONFIG } from '$lib/config';
 
   let isMenuOpen = false;
   let isLoggedIn = false;
@@ -34,10 +35,10 @@
 
       <!-- Logo/Title (Centered on Mobile) -->
       <div class="flex flex-col items-center md:items-start flex-1 md:flex-none">
-        <h1 class="text-xl md:text-2xl font-semibold text-purple-900 leading-none" style="font-family: 'Quicksand', sans-serif">Wuby</h1>
+        <h1 class="text-xl md:text-2xl font-semibold text-purple-900 leading-none" style="font-family: 'Quicksand', sans-serif">{BRAND_CONFIG.NAME}</h1>
         <div class="flex items-center gap-2 mt-1">
           <div class="w-1 h-1 rounded-full bg-purple-500 animate-pulse"></div>
-          <span class="text-[8px] font-bold uppercase tracking-[0.3em] text-purple-300">Digital Memories</span>
+          <span class="text-[8px] font-bold uppercase tracking-[0.3em] text-purple-300">{BRAND_CONFIG.TAGLINE}</span>
         </div>
       </div>
 
@@ -137,8 +138,8 @@
         <!-- The Perfect Square Frame -->
         <div class="w-full h-full bg-white rounded-3xl p-8 shadow-xl shadow-purple-200/50 border border-purple-50 relative z-10 overflow-hidden flex items-center justify-center animate-float aspect-square">
           <img 
-            src="/booth_mascot_pastel.png" 
-            alt="Wuby" 
+            src={BRAND_CONFIG.MASCOT} 
+            alt={BRAND_CONFIG.NAME} 
             class="w-full h-full object-contain"
           />
         </div>

@@ -33,6 +33,14 @@
   let showDeleteConfirm = false;
   let deleteMode: 'single' | 'batch' | null = null;
   let idToDelete: number | null = null;
+  let isMenuOpen = false;
+
+  function handleSignOut() {
+    localStorage.removeItem('sb_token');
+    localStorage.removeItem('sb_user');
+    localStorage.removeItem('sb_uid');
+    goto('/auth/login');
+  }
 
   onMount(async () => {
     token = localStorage.getItem('sb_token');
@@ -249,12 +257,20 @@
   }
 </script>
 
-<div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full">
+<div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full selection:bg-purple-200">
   <!-- Responsive Header -->
   <header class="w-full sticky top-0 z-40 bg-[#f8f2ff]/80 backdrop-blur-md border-b border-purple-100/50 px-4 py-4 md:px-8 md:py-6 flex-shrink-0">
     <div class="max-w-6xl mx-auto flex justify-between items-center relative">
-      <!-- Simplified Back Button -->
-      <div class="flex-1 shrink-0">
+      <!-- Mobile Burger -->
+      <button 
+        class="md:hidden p-2 -ml-2 text-purple-900"
+        on:click={() => isMenuOpen = true}
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <!-- Simplified Back Button (Desktop) -->
+      <div class="hidden md:flex flex-1 shrink-0">
         <button 
           on:click={() => goto('/')}
           class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
@@ -262,7 +278,7 @@
           <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
           </svg>
-          <span class="text-[10px] font-bold uppercase tracking-widest hidden md:inline">Exit</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest">Exit</span>
         </button>
       </div>
 
@@ -276,23 +292,67 @@
         {#if strips.length > 0}
             <button 
                 on:click={toggleSelectMode}
-                class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors bg-white/50 px-3 py-2 rounded-full border border-purple-50 md:border-none md:bg-transparent"
+                class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-500 hover:text-purple-600 transition-colors bg-white/80 px-4 py-2 rounded-full border border-purple-100 shadow-sm"
             >
                 {isSelectMode ? 'Cancel' : 'Select'}
             </button>
         {/if}
+        
+        <!-- Desktop Nav Items -->
+        <nav class="hidden md:flex items-center gap-6 ml-4">
+          <button on:click={() => goto('/photobooth')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Start Session</button>
+          <button 
+            on:click={handleSignOut}
+            class="px-5 py-1.5 rounded-full border-2 border-purple-100 text-purple-500 text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all"
+          >
+            Sign Out
+          </button>
+        </nav>
+
+        <!-- Mobile Spacer (balances burger) -->
+        <div class="md:hidden w-10"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu Overlay -->
+  {#if isMenuOpen}
+    <div class="fixed inset-0 z-50 bg-[#f8f2ff] flex flex-col p-6 animate-in slide-in-from-top-4">
+      <div class="flex justify-end mb-4 relative z-50">
         <button 
-          on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
-          class="text-[9px] md:text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors whitespace-nowrap bg-white/50 px-3 py-2 rounded-full border border-purple-50 md:border-none md:bg-transparent"
+          on:click={() => isMenuOpen = false}
+          class="p-4 -mr-4 text-purple-900 tap-highlight-transparent active:scale-95 transition-transform"
+          aria-label="Close menu"
         >
-          Sign Out
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
 
-      <!-- Mobile Spacer (balances layout) -->
-      <div class="md:hidden w-8"></div>
+      <nav class="flex flex-col gap-8 items-center flex-grow justify-center -mt-20">
+        <button 
+          on:click={() => { isMenuOpen = false; goto('/'); }}
+          class="text-3xl font-light text-purple-900"
+        >
+          Home
+        </button>
+        <button 
+          on:click={() => { isMenuOpen = false; goto('/photobooth'); }}
+          class="text-3xl font-light text-purple-900"
+        >
+          Start Session
+        </button>
+        <div class="w-16 h-px bg-purple-100"></div>
+        <button 
+          on:click={() => { isMenuOpen = false; handleSignOut(); }}
+          class="text-xl font-bold uppercase tracking-[0.2em] text-red-400"
+        >
+          Sign Out
+        </button>
+      </nav>
     </div>
-  </header>
+  {/if}
 
   <main class="w-full max-w-6xl mx-auto flex-grow p-4 md:p-8">
     {#if isLoading}

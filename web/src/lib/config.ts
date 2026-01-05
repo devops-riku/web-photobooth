@@ -27,6 +27,16 @@ export const API_CONFIG = {
 };
 
 /**
+ * Global brand configuration to avoid hardcoded strings/paths.
+ */
+export const BRAND_CONFIG = {
+    NAME: 'Wuby',
+    LOGO: '/wuby_logo.png',
+    MASCOT: '/booth_mascot_pastel.png',
+    TAGLINE: 'Digital Memories'
+};
+
+/**
  * Helper to get the full URL for a specific endpoint.
  */
 export function getApiUrl(

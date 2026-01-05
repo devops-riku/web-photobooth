@@ -9,7 +9,7 @@
   import { applyGLFXFilter } from '$lib/utils/glfxFilters';
   import { PREVIEW_SETTINGS } from './settings';
   import { generateUUID } from '$lib/utils/uuid';
-  import { API_CONFIG, getApiUrl } from '$lib/config';
+  import { API_CONFIG, getApiUrl, BRAND_CONFIG } from '$lib/config';
   import { SAVE_SETTINGS } from '../save/settings';
   import ColorWheel from './ColorWheel.svelte';
 
@@ -51,7 +51,7 @@
 
   onMount(async () => {
     try {
-      logoImg = await loadImage('/wuby_logo.png');
+      logoImg = await loadImage(BRAND_CONFIG.LOGO);
       // Load a placeholder QR for the preview
       qrImg = await loadImage(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`);
     } catch (e) {

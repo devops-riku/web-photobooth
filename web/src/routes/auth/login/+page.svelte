@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { getApiUrl } from '$lib/config';
+  import { getApiUrl, BRAND_CONFIG } from '$lib/config';
 
   import { page } from '$app/stores';
 
@@ -67,7 +67,7 @@
       </div>
       <div>
         <h1 class="text-3xl font-light text-purple-900 tracking-tight">Sign In</h1>
-        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300 mt-2">Wuby Photobooth</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300 mt-2">{BRAND_CONFIG.NAME} Photobooth</p>
       </div>
     </div>
 
@@ -122,7 +122,7 @@
         <button on:click={() => { 
           const redirect = $page.url.searchParams.get('redirect');
           goto(redirect ? `/auth/signup?redirect=${redirect}` : '/auth/signup');
-        }} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Join Wuby</button>
+        }} class="text-purple-500 hover:text-purple-700 underline underline-offset-4 ml-1">Join {BRAND_CONFIG.NAME}</button>
       </p>
       
       <button 

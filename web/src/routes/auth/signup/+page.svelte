@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { getApiUrl } from '$lib/config';
+  import { getApiUrl, BRAND_CONFIG } from '$lib/config';
 
   import { page } from '$app/stores';
 
@@ -60,7 +60,7 @@
       </div>
       <div>
         <h1 class="text-3xl font-light text-purple-900 tracking-tight">Create Account</h1>
-        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300 mt-2">Join the Wuby community</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-300 mt-2">Join the {BRAND_CONFIG.NAME} community</p>
       </div>
     </div>
 
