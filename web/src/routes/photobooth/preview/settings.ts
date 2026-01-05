@@ -25,10 +25,10 @@ export const PREVIEW_SETTINGS = {
     BRAND_TOP_PX: 40,             // Padding from top edge to branding
     BRAND_BOT_PX: 40,             // Padding from branding to the first photo
 
-    TIMESTAMP_TOP_PX: 70,         // Padding from the last photo to the timestamp
-    TIMESTAMP_BOT_PX: 30,         // Padding from the timestamp to the caption
+    TIMESTAMP_TOP_PX: 40,         // Padding from the last photo to the timestamp
+    TIMESTAMP_BOT_PX: 20,         // Padding from the timestamp to the caption
 
-    CAPTION_BOT_PX: 70,           // Padding from the caption to the bottom edge
+    CAPTION_BOT_PX: 40,           // Padding from the caption to the bottom edge
 
     CAPTION_COLOR: '#581c87',     // Dark purple for readability
     TIMESTAMP_COLOR: '#a855f7',    // Lighter purple for date/time

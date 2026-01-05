@@ -33,7 +33,14 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("user_id", claims["user_id"])
+			uid, ok := claims["user_id"].(string)
+			if !ok {
+				fmt.Printf("AUTH ERROR: user_id claim is not a string: %T\n", claims["user_id"])
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token"})
+				c.Abort()
+				return
+			}
+			c.Set("user_id", uid)
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid claims"})
 			c.Abort()

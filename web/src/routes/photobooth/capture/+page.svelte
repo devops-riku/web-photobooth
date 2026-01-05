@@ -17,6 +17,7 @@
   let currentShots = 0;
   let swappingIndex: number | null = null;
   let busy = false;
+  let cameraError: string | null = null;
 
   let layout: any = null;
   let shots: string[] = [];
@@ -36,7 +37,10 @@
   
   // Re-attach stream whenever video element is created/recreated
   $: if (video && stream) {
-    video.srcObject = stream;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+    video.play().catch(e => console.warn("Video play blocked:", e));
   }
 
   onMount(async () => {
@@ -48,7 +52,13 @@
   });
 
   async function initCamera() {
+    cameraError = null;
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraError = "Camera access unavailable. Make sure you are using a secure (HTTPS) connection.";
+        return;
+      }
+
       stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'user', 
@@ -56,20 +66,32 @@
           height: { ideal: CAPTURE_SETTINGS.CAMERA_IDEAL_HEIGHT } 
         }
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Camera access error:", err);
+      if (err.name === 'NotAllowedError') {
+        cameraError = "Camera permission denied. Please allow camera access in your browser settings.";
+      } else {
+        cameraError = "Could not access camera. Please check your device settings.";
+      }
     }
   }
 
-  function waitForVideo(): Promise<void> {
-    return new Promise((resolve) => {
+  function waitForVideo(timeoutMs = 5000): Promise<void> {
+    return new Promise((resolve, reject) => {
       if (video && video.readyState >= 2) return resolve();
+      
+      const startTime = Date.now();
       const check = setInterval(() => {
         if (video && video.readyState >= 2) {
           clearInterval(check);
           resolve();
+        } else if (Date.now() - startTime > timeoutMs) {
+          clearInterval(check);
+          reject(new Error("Camera timed out looks like it was blocked or unavailable."));
+        } else if (video) {
+          video.play().catch(() => {}); // Periodically try to kickstart it
         }
-      }, 50);
+      }, 100);
     });
   }
 
@@ -118,7 +140,14 @@
     // Clear previous shots
     photoboothStore.set({ shots: [] });
     await tick();
-    await waitForVideo();
+    try {
+      await waitForVideo();
+    } catch (e: any) {
+      cameraError = e.message;
+      busy = false;
+      shooting = false;
+      return;
+    }
 
     while (currentShots < maxShots) {
       await runCountdown();
@@ -135,7 +164,13 @@
     reviewing = false;
     await tick();
     shooting = true;
-    await waitForVideo();
+    try {
+      await waitForVideo();
+    } catch (e: any) {
+      cameraError = e.message;
+      shooting = false;
+      return;
+    }
     swappingIndex = index;
   }
 
@@ -375,8 +410,26 @@
             bind:this={video}
             autoplay
             playsinline
+            muted
             class="w-full h-full object-cover"
           ></video>
+
+          {#if cameraError}
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-purple-50 p-6 text-center z-50">
+              <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+              <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-4 leading-relaxed">
+                {cameraError}
+              </p>
+              <button 
+                on:click={initCamera}
+                class="bg-purple-500 text-white px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          {/if}
 
           {#if shooting && countdown > 0}
             <div class="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] z-50 transition-all duration-300">

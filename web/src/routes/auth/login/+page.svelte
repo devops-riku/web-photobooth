@@ -33,8 +33,9 @@
         if (data.access_token) {
           localStorage.setItem('sb_token', data.access_token);
         }
-        if (data.user && data.user.username) {
-            localStorage.setItem('sb_user', data.user.username);
+        if (data.user) {
+          if (data.user.username) localStorage.setItem('sb_user', data.user.username);
+          if (data.user.id) localStorage.setItem('sb_uid', data.user.id);
         }
         
         const redirect = $page.url.searchParams.get('redirect') || '/gallery';

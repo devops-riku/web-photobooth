@@ -1,5 +1,6 @@
 <script lang="ts">
   import { layoutStore, type LayoutOption } from '$lib/stores/layout.store';
+  import { photoboothStore } from '$lib/stores/photobooth.store';
   import { goto } from '$app/navigation';
   import { BOOTH_SETTINGS } from './settings';
 
@@ -23,6 +24,13 @@
     };
 
     layoutStore.set(layout);
+    // Reset photobooth store for new session
+    photoboothStore.set({
+      shots: [],
+      finalStrip: null,
+      uploadedId: null,
+      settings: null
+    });
     goto('/photobooth/capture');
   }
 </script>

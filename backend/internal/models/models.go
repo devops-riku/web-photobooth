@@ -15,13 +15,15 @@ type User struct {
 }
 
 type Strip struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	UserID    string    `gorm:"index" json:"user_id"`
-	User      User      `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	Title     string    `json:"title"`
-	FileURL   string    `json:"file_url"`
-	Caption   string    `json:"caption"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string     `gorm:"primaryKey" json:"id"`
+	UserID    *string    `gorm:"index" json:"user_id"`
+	User      User       `gorm:"foreignKey:UserID;references:ID" json:"-"`
+	Title     string     `json:"title"`
+	FileURL   string     `json:"file_url"`
+	Caption   string     `json:"caption"`
+	IsGuest   bool       `json:"is_guest"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func Migrate(db *gorm.DB) error {

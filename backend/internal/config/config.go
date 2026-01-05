@@ -16,6 +16,7 @@ type Config struct {
 	DOEndpoint  string
 	DORegion    string
 	DOBucket    string
+	GuestExpirationDays int
 }
 
 func LoadConfig() *Config {
@@ -32,6 +33,7 @@ func LoadConfig() *Config {
 		DOEndpoint:  os.Getenv("DO_SPACES_ENDPOINT"),
 		DORegion:    os.Getenv("DO_SPACES_REGION"),
 		DOBucket:    os.Getenv("DO_SPACES_BUCKET"),
+		GuestExpirationDays: 7, // Default to 7 days
 	}
 }
 

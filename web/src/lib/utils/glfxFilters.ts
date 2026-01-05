@@ -1,4 +1,5 @@
 let fx: any = null;
+let glCanvas: any = null;
 
 export async function applyGLFXFilter(
     sourceCanvas: HTMLCanvasElement,
@@ -9,12 +10,9 @@ export async function applyGLFXFilter(
         fx = module.default || module;
     }
 
-    if (typeof fx.canvas !== 'function') {
-        console.error('glfx.canvas is not a function', fx);
-        throw new Error('glfx library failed to load correctly');
+    if (!glCanvas) {
+        glCanvas = fx.canvas();
     }
-
-    const glCanvas = fx.canvas();
 
     const texture = glCanvas.texture(sourceCanvas);
 

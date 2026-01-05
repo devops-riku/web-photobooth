@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -21,18 +23,20 @@ import (
 )
 
 type Handler struct {
-	DB        *gorm.DB
-	S3Client  *s3.Client
-	Bucket    string
-	JWTSecret string
+	DB                  *gorm.DB
+	S3Client            *s3.Client
+	Bucket              string
+	JWTSecret           string
+	GuestExpirationDays int
 }
 
-func NewHandler(db *gorm.DB, s3Client *s3.Client, bucket string, jwtSecret string) *Handler {
+func NewHandler(db *gorm.DB, s3Client *s3.Client, bucket string, jwtSecret string, guestDays int) *Handler {
 	return &Handler{
-		DB:        db,
-		S3Client:  s3Client,
-		Bucket:    bucket,
-		JWTSecret: jwtSecret,
+		DB:                  db,
+		S3Client:            s3Client,
+		Bucket:              bucket,
+		JWTSecret:           jwtSecret,
+		GuestExpirationDays: guestDays,
 	}
 }
 
@@ -47,12 +51,20 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		}
 
 		strips := api.Group("/strips")
-		strips.Use(middleware.AuthMiddleware(h.JWTSecret))
 		{
-			strips.POST("/save", h.SaveStrip)
-			strips.GET("/my-strips", h.GetMyStrips)
-			strips.PATCH("/:id", h.UpdateStrip)
-			strips.DELETE("/:id", h.DeleteStrip)
+			// Public routes (no auth)
+			strips.POST("/guest-save", h.GuestSaveStrip)
+			strips.GET("/public/:id", h.GetPublicStrip)
+
+			// Protected routes
+			protected := strips.Group("/")
+			protected.Use(middleware.AuthMiddleware(h.JWTSecret))
+			{
+				protected.POST("/save", h.SaveStrip)
+				protected.GET("/my-strips", h.GetMyStrips)
+				protected.PATCH("/:id", h.UpdateStrip)
+				protected.DELETE("/:id", h.DeleteStrip)
+			}
 		}
 	}
 }
@@ -137,6 +149,7 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": tokenString,
 		"user": gin.H{
+			"id":       user.ID,
 			"username": user.Username,
 			"email":    user.Email,
 		},
@@ -150,6 +163,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 func (h *Handler) SaveStrip(c *gin.Context) {
 	userID := c.GetString("user_id")
 	var req struct {
+		ID      string `json:"id"`
 		Image   string `json:"image"` // Base64
 		Title   string `json:"title"`
 		Caption string `json:"caption"`
@@ -172,15 +186,20 @@ func (h *Handler) SaveStrip(c *gin.Context) {
 		return
 	}
 
-	// 2. Upload to S3 (DigitalOcean Spaces)
-	fileName := fmt.Sprintf("strips/%s/%s.png", userID, uuid.New().String())
-	
+	// 2. Prepare IDs and Filename
+	stripID := req.ID
+	if stripID == "" {
+		stripID = uuid.New().String()
+	}
+	fileName := fmt.Sprintf("strips/%s/%s.png", userID, stripID)
+
+	// 3. Upload to S3 (DigitalOcean Spaces)
 	_, err = h.S3Client.PutObject(c.Request.Context(), &s3.PutObjectInput{
 		Bucket:      aws.String(h.Bucket),
 		Key:         aws.String(fileName),
 		Body:        bytes.NewReader(imgBytes),
 		ContentType: aws.String("image/png"),
-		ACL:         "public-read",
+		ACL:         types.ObjectCannedACLPublicRead,
 	})
 
 	if err != nil {
@@ -192,9 +211,15 @@ func (h *Handler) SaveStrip(c *gin.Context) {
 	// 3. Construct File URL using CDN
 	fileURL := fmt.Sprintf("https://%s.sgp1.cdn.digitaloceanspaces.com/%s", h.Bucket, fileName)
 
-	// 4. Save to DB
+	// 4. Save to DB (already have stripID)
+	log.Printf("SaveStrip: userID=%s, stripID=%s, fileURL=%s", userID, stripID, fileURL)
+	// 4. Save to DB (already have stripID)
+	uid := userID
+	log.Printf("SaveStrip: Writing to DB - userID=%s, stripID=%s", uid, stripID)
+	
 	strip := models.Strip{
-		UserID:    userID,
+		ID:        stripID,
+		UserID:    &uid,
 		Title:     req.Title,
 		FileURL:   fileURL,
 		Caption:   req.Caption,
@@ -202,9 +227,16 @@ func (h *Handler) SaveStrip(c *gin.Context) {
 	}
 
 	if err := h.DB.Create(&strip).Error; err != nil {
+		log.Printf("SaveStrip DB Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
 		return
 	}
+	
+	uidVal := "NIL"
+	if strip.UserID != nil {
+		uidVal = *strip.UserID
+	}
+	log.Printf("SaveStrip SUCCESS: id=%s, stored_user_id=%s", strip.ID, uidVal)
 
 	// Return ID so frontend can update it later
 	c.JSON(http.StatusOK, gin.H{
@@ -212,6 +244,106 @@ func (h *Handler) SaveStrip(c *gin.Context) {
 		"file_url": fileURL,
 		"id":       strip.ID,
 	})
+}
+
+func (h *Handler) GuestSaveStrip(c *gin.Context) {
+	var req struct {
+		ID      string `json:"id"`
+		Image   string `json:"image"` // Base64
+		Title   string `json:"title"`
+		Caption string `json:"caption"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// 1. Decode
+	b64data := req.Image
+	if idx := strings.Index(b64data, ","); idx != -1 {
+		b64data = b64data[idx+1:]
+	}
+
+	imgBytes, err := base64.StdEncoding.DecodeString(b64data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode image"})
+		return
+	}
+
+	// 2. Prepare IDs and Filename
+	log.Printf("Incoming request ID: %s", req.ID)
+	stripID := req.ID
+	if stripID == "" {
+		stripID = uuid.New().String()
+		log.Printf("No ID provided, generated new: %s", stripID)
+	}
+	fileName := fmt.Sprintf("strips/guest/%s.png", stripID)
+	log.Printf("Final fileName for upload: %s", fileName)
+
+	// 3. Upload to S3
+	_, err = h.S3Client.PutObject(c.Request.Context(), &s3.PutObjectInput{
+		Bucket:      aws.String(h.Bucket),
+		Key:         aws.String(fileName),
+		Body:        bytes.NewReader(imgBytes),
+		ContentType: aws.String("image/png"),
+		ACL:         types.ObjectCannedACLPublicRead,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload to storage"})
+		return
+	}
+
+	// 3. Construct File URL
+	fileURL := fmt.Sprintf("https://%s.sgp1.cdn.digitaloceanspaces.com/%s", h.Bucket, fileName)
+
+	// 4. Expiration
+	expiresAt := time.Now().AddDate(0, 0, h.GuestExpirationDays)
+
+	// 6. Save to DB (already have stripID)
+
+	strip := models.Strip{
+		ID:        stripID,
+		UserID:    nil,
+		Title:     req.Title,
+		FileURL:   fileURL,
+		Caption:   req.Caption,
+		IsGuest:   true,
+		ExpiresAt: &expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	if err := h.DB.Create(&strip).Error; err != nil {
+		log.Printf("DATABASE ERROR in GuestSaveStrip: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save to database"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Guest strip saved successfully",
+		"file_url":   fileURL,
+		"id":         strip.ID,
+		"expires_at": expiresAt,
+	})
+}
+
+func (h *Handler) GetPublicStrip(c *gin.Context) {
+	id := c.Param("id")
+	var strip models.Strip
+
+	if err := h.DB.First(&strip, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Memory not found"})
+		return
+	}
+
+	// Double check expiration for guests
+	if strip.IsGuest && strip.ExpiresAt != nil && time.Now().After(*strip.ExpiresAt) {
+		c.JSON(http.StatusGone, gin.H{"error": "This memory has expired"})
+		return
+	}
+
+	c.JSON(http.StatusOK, strip)
 }
 
 func (h *Handler) GetMyStrips(c *gin.Context) {
@@ -239,10 +371,26 @@ func (h *Handler) UpdateStrip(c *gin.Context) {
 	}
 
 	var strip models.Strip
+	log.Printf("UpdateStrip lookup: id=%s, user_id=%s", stripID, userID)
 	if err := h.DB.Where("id = ? AND user_id = ?", stripID, userID).First(&strip).Error; err != nil {
+		log.Printf("UpdateStrip NOT FOUND with user_id: id=%s, user_id=%s", stripID, userID)
+		
+		// Diagnostic: Check if ID exists AT ALL
+		var check models.Strip
+		if errCheck := h.DB.Where("id = ?", stripID).First(&check).Error; errCheck == nil {
+			storedUID := "NIL"
+			if check.UserID != nil {
+				storedUID = *check.UserID
+			}
+			log.Printf("DIAGNOSTIC: Strip %s EXISTS. Stored UserID: %s, Current UserID: %s", stripID, storedUID, userID)
+		} else {
+			log.Printf("DIAGNOSTIC: Strip %s TRULY does not exist in DB", stripID)
+		}
+
 		c.JSON(http.StatusNotFound, gin.H{"error": "Strip not found"})
 		return
 	}
+	log.Printf("UpdateStrip FOUND: id=%s", strip.ID)
 
 	if req.Title != "" {
 		strip.Title = req.Title
@@ -269,4 +417,50 @@ func (h *Handler) DeleteStrip(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Strip deleted"})
+}
+
+func (h *Handler) CleanupExpiredStrips() {
+	var expiredStrips []models.Strip
+	now := time.Now()
+
+	// Find expired guest strips
+	if err := h.DB.Where("is_guest = ? AND expires_at < ?", true, now).Find(&expiredStrips).Error; err != nil {
+		log.Printf("Cleanup Error (Find): %v", err)
+		return
+	}
+
+	if len(expiredStrips) == 0 {
+		return
+	}
+
+	log.Printf("Found %d expired guest strips to clean up", len(expiredStrips))
+
+	for _, strip := range expiredStrips {
+		// 1. Extract Key from URL
+		// URL Format: https://{bucket}.sgp1.cdn.digitaloceanspaces.com/strips/guest/{uuid}.png
+		parts := strings.SplitN(strip.FileURL, ".com/", 2)
+		if len(parts) < 2 {
+			log.Printf("Cleanup Warning: Could not parse key from URL %s", strip.FileURL)
+			continue
+		}
+		key := parts[1]
+
+		// 2. Delete from S3
+		_, err := h.S3Client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+			Bucket: aws.String(h.Bucket),
+			Key:    aws.String(key),
+		})
+		if err != nil {
+			log.Printf("Cleanup Error (S3 Delete %s): %v", key, err)
+			// Continue to DB delete anyway to avoid getting stuck, or omit? 
+			// Usually better to delete DB if S3 is gone or failed 404
+		}
+
+		// 3. Delete from DB
+		if err := h.DB.Delete(&strip).Error; err != nil {
+			log.Printf("Cleanup Error (DB Delete ID %s): %v", strip.ID, err)
+		} else {
+			log.Printf("Successfully cleaned up expired strip: %s", key)
+		}
+	}
 }

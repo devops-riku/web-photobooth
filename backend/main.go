@@ -36,14 +36,14 @@ func main() {
 	}
 
 	// 4. Initialize Handler (Monolithic, no Supabase)
-	h := handlers.NewHandler(db, s3Client, cfg.DOBucket, cfg.JWTSecret)
+	h := handlers.NewHandler(db, s3Client, cfg.DOBucket, cfg.JWTSecret, cfg.GuestExpirationDays)
 
 	// 5. Setup Router
 	r := gin.Default()
 
 	// 6. Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -53,6 +53,17 @@ func main() {
 
 	// 7. API Routes (Now modularly registered)
 	h.RegisterRoutes(r)
+
+	// 8. Start Background Cleanup Worker
+	go func() {
+		// Run once on startup
+		h.CleanupExpiredStrips()
+		
+		ticker := time.NewTicker(1 * time.Hour)
+		for range ticker.C {
+			h.CleanupExpiredStrips()
+		}
+	}()
 
 	log.Printf("Starting monolithic backend on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

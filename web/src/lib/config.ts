@@ -11,10 +11,15 @@ export const API_CONFIG = {
         LOGIN: '/api/auth/login',
         SIGNUP: '/api/auth/signup',
         SAVE_STRIP: '/api/strips/save',
+        GUEST_SAVE: '/api/strips/guest-save',
+        PUBLIC_STRIP: '/api/strips/public/', // Base for /:id
         GET_STRIPS: '/api/strips/my-strips',
         STRIP_DETAIL: '/api/strips/', // Base for /:id
         SYNC_USER: '/api/auth/sync'
-    }
+    },
+    APP_URL: 'http://localhost:5173',
+    // DO Spaces CDN URL
+    DO_SPACES_URL: 'https://innotekinc.sgp1.cdn.digitaloceanspaces.com'
 };
 
 /**

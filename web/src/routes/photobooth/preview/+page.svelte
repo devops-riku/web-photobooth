@@ -8,23 +8,31 @@
   import { computeStripLayout } from '$lib/utils/stripLayout';
   import { applyGLFXFilter } from '$lib/utils/glfxFilters';
   import { PREVIEW_SETTINGS } from './settings';
+  import { generateUUID } from '$lib/utils/uuid';
+  import { API_CONFIG, getApiUrl } from '$lib/config';
+  import { SAVE_SETTINGS } from '../save/settings';
 
 
   let layout: { count: 2 | 3 | 4 } | null = null;
   let shots: string[] = [];
-
   let filter = PREVIEW_SETTINGS.DEFAULT_FILTER;
   let caption = PREVIEW_SETTINGS.DEFAULT_CAPTION;
   let captionSize = PREVIEW_SETTINGS.DEFAULT_CAPTION_SIZE;
   let font = PREVIEW_SETTINGS.DEFAULT_FONT;
   let stripColor = PREVIEW_SETTINGS.STRIP_BG_COLOR;
 
-
-
+  // Global State
   let previewUrl: string | null = null;
   let error: string | null = null;
   let logoImg: HTMLImageElement | null = null;
   let qrImg: HTMLImageElement | null = null;
+  let qrData = 'https://wuby.link/pending';
+
+  // UI State
+  let isConfirming = false;
+  let isUploading = false;
+  let uploadError = '';
+  let showControls = false;
 
   // Subscribe stores (NO goto here)
   layoutStore.subscribe(v => layout = v);
@@ -32,22 +40,26 @@
 
   const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous'; // Critical for external APIs
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = (e) => reject(new Error(`Failed to load: ${src}`));
     img.src = src;
   });
 
   onMount(async () => {
     try {
-      [logoImg, qrImg] = await Promise.all([
-        loadImage('/wuby_logo.png'),
-        loadImage('/sample_qr.png')
-      ]);
+      logoImg = await loadImage('/wuby_logo.png');
+      // Load a placeholder QR for the preview
+      qrImg = await loadImage(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`);
     } catch (e) {
       console.error('Failed to pre-load branding:', e);
     }
     await updatePreview();
   });
+
+  function onCaptionInput() {
+    debouncedUpdate();
+  }
 
   let updateTimeout: any;
   function debouncedUpdate() {
@@ -70,8 +82,7 @@
       const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
       const initialLayout = computeStripLayout(layout.count, dpi);
       
-      // 2. Use Pre-loaded Brand Assets
-      if (!logoImg || !qrImg) return;
+      // 2. Use Pre-loaded Brand Assets (Optional for preview)
       const logo = logoImg;
       const qr = qrImg;
 
@@ -79,9 +90,13 @@
       const qrRatio = qr.width / qr.height;
       const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
       const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
-      const brandHeight = logoW_qrW_total / (logoRatio + qrRatio);
 
       // 3. Calculate dynamic margins based on paddings in settings
+      // Constrain branding height if it's too crazy
+      const maxBrandHeight = 120;
+      const calculatedBrandHeight = logoW_qrW_total / (logoRatio + qrRatio);
+      const brandHeight = Math.min(calculatedBrandHeight, maxBrandHeight);
+
       const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
       const topIn = topPx / dpi;
 
@@ -109,15 +124,18 @@
       const fullLayout = computeStripLayout(layout.count, dpi, topIn, bottomIn);
 
       // ─────────────────────────
-      // TOP BRAND (Logo + QR)
+      // TOP BRAND (Logo + QR) - Centered and Aligned to Photos
       // ─────────────────────────
       const logoW = logoRatio * brandHeight;
       const qrW = qrRatio * brandHeight;
-      const brandX = fullLayout.contentX + PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX;
+      const totalWidth = logoW + PREVIEW_SETTINGS.BRAND_GAP_PX + qrW;
+      
+      // Center the whole brand block within contentWidthPx
+      const brandX = fullLayout.contentX + (fullLayout.contentWidthPx - totalWidth) / 2;
       const brandY = PREVIEW_SETTINGS.BRAND_TOP_PX;
 
-      ctx.drawImage(logo, brandX, brandY, logoW, brandHeight);
-      ctx.drawImage(qr, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
+      if (logo) ctx.drawImage(logo, brandX, brandY, logoW, brandHeight);
+      if (qr) ctx.drawImage(qr, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
 
       // ─────────────────────────
       // TIMESTAMP (Horizontal)
@@ -167,21 +185,133 @@
     }
   }
 
+  let processing = false;
+  async function handleConfirm() {
+    if (processing || isUploading) return;
+    processing = true;
+    isUploading = true;
+    isConfirming = false;
+    uploadError = '';
 
-  let showControls = false;
+    try {
+      const stripId = generateUUID();
+      const token = localStorage.getItem('sb_token');
+      const uid = localStorage.getItem('sb_uid');
+      
+      let shareUrl = '';
+      if (token && uid) {
+        shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/${uid}/${stripId}.png`;
+      } else {
+        shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/guest/${stripId}.png`;
+      }
+      console.log("PHOTOBOOTH DEBUG: Generating ID:", stripId);
+      console.log("PHOTOBOOTH DEBUG: Expected URL:", shareUrl);
+      
+      // 1. Fetch REAL QR first (with timeout)
+      const realQRImg: HTMLImageElement = await Promise.race([
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("QR Generator failed. Connection issue?"));
+          img.src = `${SAVE_SETTINGS.BASE_QR_API}${encodeURIComponent(shareUrl)}`;
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error("QR Generation timed out. Please try again.")), 12000)
+        )
+      ]);
 
-  async function onFilterChange() {
-    debouncedUpdate();
-  }
+      // 2. Re-render with REAL assets for the upload version
+      const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
+      // Re-run the exact layout and drawing logic
+      if (!logoImg) throw new Error("Logo not loaded");
+      
+      const logoRatio = logoImg.width / logoImg.height;
+      const qrRatio = realQRImg.width / realQRImg.height;
+      const initialLayout = computeStripLayout((layout as any).count, dpi);
+      const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
+      const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
+      
+      const maxBrandHeight = 120;
+      const brandHeight = Math.min(logoW_qrW_total / (logoRatio + qrRatio), maxBrandHeight);
 
-  async function onCaptionInput() {
-    debouncedUpdate();
+      const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
+      const topIn = topPx / dpi;
+      const timestampH = 20;
+      const captionH = captionSize * 1.2;
+      const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
+      const bottomIn = bottomPx / dpi;
+
+      const canvas = await renderStripCanvas(shots, (layout as any).count, dpi, filter, topIn, bottomIn, stripColor);
+      const ctx = canvas.getContext('2d')!;
+      const fullLayout = computeStripLayout((layout as any).count, dpi, topIn, bottomIn);
+      const logoW = logoRatio * brandHeight;
+      const qrW = qrRatio * brandHeight;
+      const totalWidth = logoW + PREVIEW_SETTINGS.BRAND_GAP_PX + qrW;
+      const brandX = fullLayout.contentX + (fullLayout.contentWidthPx - totalWidth) / 2;
+      const brandY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+      ctx.drawImage(logoImg, brandX, brandY, logoW, brandHeight);
+      ctx.drawImage(realQRImg, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
+      
+      // Draw Timestamp & Caption (Simplified for re-render)
+      const date = new Date();
+      const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase() + " • " + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+      const lastPhotoBottom = fullLayout.topCanvasPx + (fullLayout.photoHeightPx * (layout as any).count) + (fullLayout.gapPx * ((layout as any).count - 1));
+      const timestampY = lastPhotoBottom + PREVIEW_SETTINGS.TIMESTAMP_TOP_PX;
+      ctx.fillStyle = PREVIEW_SETTINGS.TIMESTAMP_COLOR; ctx.textAlign = 'center'; ctx.font = '700 12px Montserrat, sans-serif'; ctx.letterSpacing = '2px';
+      ctx.fillText(timeStr, canvas.width / 2, timestampY + 10);
+      ctx.fillStyle = PREVIEW_SETTINGS.CAPTION_COLOR; ctx.textAlign = 'center'; ctx.font = `${captionSize}px ${font}, system-ui, sans-serif`;
+      const captionY = timestampY + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX;
+      ctx.fillText(caption || ' ', canvas.width / 2, captionY + (captionSize * 0.8));
+
+      const finalOutput = canvas.toDataURL('image/png');
+
+      // 3. Upload
+      const apiEndpoint = token ? getApiUrl('SAVE_STRIP') : getApiUrl('GUEST_SAVE');
+      
+      const uploadResponse = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          id: stripId,
+          image: finalOutput,
+          title: token ? 'My Memory' : 'Guest Memory',
+          caption: caption || 'Captured with Wuby'
+        })
+      });
+
+      if (!uploadResponse.ok) throw new Error("Upload failed");
+      const result = await uploadResponse.json();
+      const finalId = result.id || stripId; // Use backend ID if available
+
+      // 4. Update Store and Redirect
+      photoboothStore.update(s => ({
+        ...s,
+        finalStrip: finalOutput,
+        uploadedId: finalId,
+        settings: { filter, stripColor, caption, captionSize, font }
+      }));
+
+      // If guest, we should pass info to save page or handle there
+      if (!token) {
+        // For guest, save page will need the ID to show the link
+        localStorage.setItem('last_guest_id', stripId);
+      }
+      
+      goto('/photobooth/save');
+    } catch (e: any) {
+      console.error("Critical error during final render/upload:", e);
+      uploadError = e.message || "Failed to process final memory";
+      // We keep isUploading = true so the error UI remains visible
+    }
   }
 
   function handleContinue() {
     if (previewUrl) {
-      photoboothStore.update(s => ({ ...s, finalStrip: previewUrl }));
-      goto('/photobooth/save');
+      isConfirming = true;
     }
   }
 </script>
@@ -204,34 +334,85 @@
       </button>
 
       <button
-        class="border border-purple-200 hover:bg-purple-100/50 text-purple-500 px-4 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95"
+        class="border border-purple-200 hover:bg-purple-100/50 text-purple-500 px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95 disabled:opacity-30"
         on:click={() => goto('/photobooth/capture')}
+        disabled={isUploading}
       >
         Retake
       </button>
       <button
-        class="bg-purple-500 hover:bg-purple-600 text-white px-4 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95 shadow-md shadow-purple-200"
+        class="bg-purple-500 hover:bg-purple-600 text-white px-3 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all active:scale-95 shadow-md shadow-purple-200 disabled:opacity-50"
         on:click={handleContinue}
+        disabled={!previewUrl || isUploading}
       >
         Continue
       </button>
     </div>
   </header>
 
+  {#if isConfirming}
+    <div class="fixed inset-0 z-[100] bg-purple-900/20 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+      <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center text-center gap-6 animate-in slide-in-from-bottom-4">
+        <div class="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center text-purple-500">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div class="flex flex-col gap-2">
+          <h2 class="text-xl font-medium text-slate-800">Finalize Memory?</h2>
+          <p class="text-sm text-slate-400">We'll render your high-resolution strip with a scannable share link.</p>
+        </div>
+        <div class="flex flex-col w-full gap-3 mt-4">
+           <button 
+            on:click={handleConfirm}
+            disabled={isUploading}
+            class="w-full bg-purple-600 text-white py-4 rounded-2xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50"
+           >
+            {isUploading ? 'Finalizing...' : 'Generate & Continue'}
+           </button>
+           <button 
+            on:click={() => isConfirming = false}
+            class="w-full text-slate-400 py-2 text-[10px] font-bold uppercase tracking-widest hover:text-slate-600 transition-colors"
+           >
+            Wait, I'm not done
+           </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if isUploading}
+    <div class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+      <div class="w-16 h-16 border-4 border-purple-100 border-t-purple-500 rounded-full animate-spin mb-8"></div>
+      <h2 class="text-2xl font-light text-purple-900 mb-2">Creating your digital memory...</h2>
+      <p class="text-xs text-purple-300 font-bold uppercase tracking-[0.3em] animate-pulse">Please stay on this page</p>
+      
+      {#if uploadError}
+        <div class="mt-8 p-6 bg-red-50 text-red-600 rounded-[2rem] text-xs font-bold uppercase tracking-widest max-w-xs text-center border-2 border-red-100 animate-in zoom-in duration-300">
+          <p class="mb-4">{uploadError}</p>
+          <button 
+            on:click={() => { isUploading = false; uploadError = ''; }} 
+            class="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-100"
+          >
+            Go Back
+          </button>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
     <!-- Strip Preview Section - Minimalist -->
-    <div class="flex-1 flex items-center justify-center p-4 md:p-12 bg-purple-100/10 overflow-hidden">
+    <div class="flex-1 flex flex-col items-center justify-center p-4 md:p-12 bg-purple-100/10 overflow-hidden relative">
       {#if error}
         <div class="text-center">
           <p class="text-sm text-red-400 mb-4">{error}</p>
           <button class="text-xs font-bold text-purple-500 underline" on:click={() => location.reload()}>Try again</button>
         </div>
       {:else if previewUrl}
-        <div class="h-full w-full relative flex items-center justify-center overflow-hidden">
+        <div class="h-full w-full max-h-[75vh] md:max-h-full relative flex items-center justify-center p-2">
           <img
             src={previewUrl}
             alt="Photobooth strip"
-            class="max-h-full max-w-full object-contain transition-transform duration-500 shadow-sm"
+            class="max-h-full max-w-full object-contain transition-all duration-500 drop-shadow-[0_10px_30px_rgba(0,0,0,0.1)] md:hover:scale-[1.02]"
           />
         </div>
       {:else}
@@ -257,7 +438,7 @@
             {#each PREVIEW_SETTINGS.AVAILABLE_FILTERS as f}
               <button
                 class="px-4 py-2.5 text-[11px] font-medium rounded-xl border transition-all {filter === f ? 'bg-purple-100/50 border-purple-300 text-purple-700' : 'bg-transparent border-slate-100 text-slate-400 hover:border-purple-200 hover:text-purple-500'}"
-                on:click={() => { filter = f; onFilterChange(); }}
+                on:click={() => { filter = f; updatePreview(); }}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
@@ -352,26 +533,6 @@
 </div>
 
 <style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.05);
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(0,0,0,0.1);
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
 </style>
 
 
