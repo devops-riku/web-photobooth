@@ -267,15 +267,26 @@
 <div class="h-screen flex flex-col bg-[#f8f2ff] overflow-hidden">
   <!-- Status Bar -->
   <header class="p-6 flex justify-between items-center">
-    <div class="flex items-center gap-2">
-      <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-      <span class="text-[10px] font-bold tracking-[0.2em] text-purple-400 uppercase">Booth Session</span>
-    </div>
+    <!-- Back Button -->
+    <button 
+      on:click={() => goto('/photobooth')}
+      class="text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-2 group"
+    >
+      <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-widest hidden md:inline">Exit</span>
+    </button>
     
     <div class="flex gap-1.5">
       {#each Array(maxShots) as _, i}
         <div class="w-8 h-1 rounded-full transition-all duration-700 {i < currentShots ? 'bg-purple-400' : 'bg-purple-100'}"></div>
       {/each}
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+      <span class="text-[10px] font-bold tracking-[0.2em] text-purple-400 uppercase hidden md:inline">Booth Session</span>
     </div>
   </header>
 
