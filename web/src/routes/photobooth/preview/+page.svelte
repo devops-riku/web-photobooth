@@ -11,6 +11,7 @@
   import { generateUUID } from '$lib/utils/uuid';
   import { API_CONFIG, getApiUrl } from '$lib/config';
   import { SAVE_SETTINGS } from '../save/settings';
+  import ColorWheel from './ColorWheel.svelte';
 
 
   let layout: { count: 2 | 3 | 4 } | null = null;
@@ -33,6 +34,7 @@
   let isUploading = false;
   let uploadError = '';
   let showControls = false;
+  let showColorWheel = false;
 
   // Subscribe stores (NO goto here)
   layoutStore.subscribe(v => layout = v);
@@ -469,22 +471,25 @@
               </button>
             {/each}
 
-            <!-- Custom Color Picker -->
-            <label 
-              class="w-8 h-8 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center cursor-pointer hover:border-purple-300 transition-all active:scale-90 relative overflow-hidden"
-              title="Custom Color"
+            <!-- Custom Color Picker Trigger -->
+            <button 
+              class="w-8 h-8 rounded-full border-2 border-slate-200 flex items-center justify-center cursor-pointer hover:border-purple-300 transition-all active:scale-90 relative overflow-hidden {showColorWheel ? 'border-purple-500 ring-2 ring-purple-100' : ''}"
+              style="background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);"
+              on:click={() => showColorWheel = !showColorWheel}
+              title="Custom Color Wheel"
             >
-              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
-              <input 
-                type="color" 
-                class="absolute inset-0 opacity-0 cursor-pointer scale-150"
-                bind:value={stripColor}
-                on:input={debouncedUpdate}
-              />
-            </label>
+              <div class="w-3 h-3 bg-white rounded-full shadow-sm"></div>
+            </button>
           </div>
+
+          {#if showColorWheel}
+            <div class="mt-4 p-4 bg-purple-50/50 rounded-3xl border border-purple-100 flex justify-center animate-in slide-in-from-top-2 duration-300">
+              <ColorWheel 
+                bind:value={stripColor}
+                on:change={debouncedUpdate}
+              />
+            </div>
+          {/if}
         </section>
 
         <section>
