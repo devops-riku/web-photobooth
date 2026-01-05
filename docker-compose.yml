@@ -1,12 +1,13 @@
 services:
+  # =========================
+  # PostgreSQL (PRIVATE)
+  # =========================
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${DB_USER:-photouser}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-photopass}
       POSTGRES_DB: ${DB_NAME:-photobooth}
-    ports:
-      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +16,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # =========================
+  # Backend (Go / Gin)
+  # =========================
   backend:
     build:
       context: ./backend
@@ -23,6 +27,7 @@ services:
       db:
         condition: service_healthy
 
+    # Load secrets locally (NOT in production)
     env_file:
       - ./backend/.env
 
@@ -31,14 +36,11 @@ services:
       DATABASE_URL: postgres://${DB_USER:-photouser}:${DB_PASSWORD:-photopass}@db:5432/${DB_NAME:-photobooth}?sslmode=disable
       GUEST_EXPIRATION_DAYS: 7
 
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-    ports:
-      - "3000:3000"
-
     restart: always
 
+  # =========================
+  # Frontend (Vite)
+  # =========================
   frontend:
     build:
       context: ./web
@@ -46,19 +48,17 @@ services:
     depends_on:
       - backend
 
-    # 🔑 use relative API path (best practice)
+    # NO API BASE URL HERE
+    # Frontend must call /api/*
     environment:
-      PUBLIC_API_BASE_URL: http://localhost:3000
+      NODE_ENV: production
       PORT: 5173
-      ORIGIN: http://localhost
-      PROTOCOL_HEADER: x-forwarded-proto
-      HOST_HEADER: x-forwarded-host
-    
-    ports:
-      - "5173:5173"
 
     restart: always
 
+  # =========================
+  # Nginx (Gateway)
+  # =========================
   nginx:
     image: nginx:alpine
     ports:
