@@ -1,7 +1,23 @@
 <script lang="ts">
   import { HOME_SETTINGS } from './settings';
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+
   let isMenuOpen = false;
+  let isLoggedIn = false;
+
+  onMount(() => {
+    const token = localStorage.getItem('sb_token');
+    isLoggedIn = !!token;
+  });
+
+  function handleSignOut() {
+    localStorage.removeItem('sb_token');
+    localStorage.removeItem('sb_user');
+    localStorage.removeItem('sb_uid');
+    isLoggedIn = false;
+    goto('/auth/login');
+  }
 </script>
 
 <div class="min-h-screen bg-[#f8f2ff] flex flex-col relative overflow-hidden selection:bg-purple-200">
@@ -28,12 +44,21 @@
       <!-- Desktop Nav -->
       <nav class="hidden md:flex items-center gap-8">
         <button on:click={() => goto('/gallery')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Gallery</button>
-        <button 
-          on:click={() => goto('/auth/login')}
-          class="px-6 py-2 rounded-full border-2 border-purple-100 text-purple-500 text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all"
-        >
-          Login
-        </button>
+        {#if isLoggedIn}
+          <button 
+            on:click={handleSignOut}
+            class="px-6 py-2 rounded-full border-2 border-purple-100 text-purple-500 text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all"
+          >
+            Sign Out
+          </button>
+        {:else}
+          <button 
+            on:click={() => goto('/auth/login')}
+            class="px-6 py-2 rounded-full border-2 border-purple-100 text-purple-500 text-[10px] font-bold uppercase tracking-widest hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all"
+          >
+            Login
+          </button>
+        {/if}
       </nav>
 
       <!-- Mobile Spacer -->
@@ -69,12 +94,21 @@
           Gallery
         </button>
         <div class="w-16 h-px bg-purple-100"></div>
-        <button 
-          on:click={() => { isMenuOpen = false; goto('/auth/login'); }}
-          class="text-3xl font-light text-purple-900"
-        >
-          Login
-        </button>
+        {#if isLoggedIn}
+          <button 
+            on:click={() => { isMenuOpen = false; handleSignOut(); }}
+            class="text-3xl font-light text-purple-900"
+          >
+            Sign Out
+          </button>
+        {:else}
+          <button 
+            on:click={() => { isMenuOpen = false; goto('/auth/login'); }}
+            class="text-3xl font-light text-purple-900"
+          >
+            Login
+          </button>
+        {/if}
       </nav>
     </div>
   {/if}

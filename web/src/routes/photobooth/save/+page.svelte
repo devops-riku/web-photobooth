@@ -36,11 +36,15 @@
 
     if (uploadedId) {
       if (token) {
-        savedStripId = uploadedId;
-        saveMessage = 'Successfully Saved!';
+        // Don't auto-set savedStripId or saveMessage here. Let the user explicitly save.
+        // Try to construct a likely URL, but it might be guest or user path.
+        // We'll rely on saveToGallery to fix the URL if it changes ownership.
         const uid = localStorage.getItem('sb_uid');
+        // Default to user path, but it might be wrong if it's currently a guest strip. 
+        // This is a known limitation until "Save" is clicked or we query the API, 
+        // but for now we follow the button text request.
         guestFileURL = `${API_CONFIG.DO_SPACES_URL}/strips/${uid}/${uploadedId}.png`;
-        console.log("SAVE PAGE DEBUG: ID found, URL set to:", guestFileURL);
+        console.log("SAVE PAGE DEBUG: ID found, potential URL:", guestFileURL);
       } else {
         guestFileURL = `${API_CONFIG.DO_SPACES_URL}/strips/guest/${uploadedId}.png`;
         showQR = true;
@@ -65,13 +69,14 @@
   }
 
   async function saveToGallery() {
-    if (!token || !savedStripId) return;
+    const targetId = savedStripId || uploadedId;
+    if (!token || !targetId) return;
     isSaving = true;
     saveMessage = '';
 
     try {
-      // Update existing strip (Rename)
-      const response = await fetch(getApiUrl('STRIP_DETAIL', savedStripId), {
+      // Update existing strip (Rename) OR Claim guest strip
+      const response = await fetch(getApiUrl('STRIP_DETAIL', targetId), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +86,12 @@
       });
 
       if (response.ok) {
-        saveMessage = 'Memory Updated!';
+        const data = await response.json();
+        saveMessage = 'Memory Saved!';
+        savedStripId = targetId; // Confirm it's saved/owned now
+        if (data.file_url) {
+             guestFileURL = data.file_url; // Update to the authoritative URL from backend
+        }
       } else {
         const data = await response.json();
         saveMessage = data.error || 'Failed to update';
@@ -255,10 +265,10 @@
           </button>
 
             <div class="flex flex-col items-center gap-2 mt-2 animate-in fade-in">
-              <p class="text-[10px] text-center font-bold uppercase tracking-widest {saveMessage.includes('Successfully') || saveMessage.includes('Updated') ? 'text-green-600' : 'text-red-500'}">
+              <p class="text-[10px] text-center font-bold uppercase tracking-widest {saveMessage.includes('Saved') || saveMessage.includes('Updated') ? 'text-green-600' : 'text-red-500'}">
                 {saveMessage}
               </p>
-              {#if saveMessage.includes('Successfully') || saveMessage.includes('Updated')}
+              {#if saveMessage.includes('Saved') || saveMessage.includes('Updated')}
                 <div class="flex flex-col gap-3 mt-2">
                   <button 
                     on:click={copyLink}
