@@ -93,7 +93,7 @@
 
       // 3. Calculate dynamic margins based on paddings in settings
       // Constrain branding height if it's too crazy
-      const maxBrandHeight = 120;
+      const maxBrandHeight = 300;
       const calculatedBrandHeight = logoW_qrW_total / (logoRatio + qrRatio);
       const brandHeight = Math.min(calculatedBrandHeight, maxBrandHeight);
 
@@ -124,18 +124,19 @@
       const fullLayout = computeStripLayout(layout.count, dpi, topIn, bottomIn);
 
       // ─────────────────────────
-      // TOP BRAND (Logo + QR) - Centered and Aligned to Photos
+      // TOP BRAND (Logo + QR) - Aligned to Edges
       // ─────────────────────────
       const logoW = logoRatio * brandHeight;
-      const qrW = qrRatio * brandHeight;
-      const totalWidth = logoW + PREVIEW_SETTINGS.BRAND_GAP_PX + qrW;
-      
-      // Center the whole brand block within contentWidthPx
-      const brandX = fullLayout.contentX + (fullLayout.contentWidthPx - totalWidth) / 2;
-      const brandY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+      const qrHeight = brandHeight * 0.6;
+      const qrW = qrRatio * qrHeight;
 
-      if (logo) ctx.drawImage(logo, brandX, brandY, logoW, brandHeight);
-      if (qr) ctx.drawImage(qr, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
+      const logoX = fullLayout.contentX;
+      const qrX = fullLayout.contentX + fullLayout.contentWidthPx - qrW;
+      const logoY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+      const qrY = logoY + (brandHeight - qrHeight) / 2;
+
+      if (logo) ctx.drawImage(logo, logoX, logoY, logoW, brandHeight);
+      if (qr) ctx.drawImage(qr, qrX, qrY, qrW, qrHeight);
 
       // ─────────────────────────
       // TIMESTAMP (Horizontal)
@@ -232,7 +233,7 @@
       const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
       const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
       
-      const maxBrandHeight = 120;
+      const maxBrandHeight = 200;
       const brandHeight = Math.min(logoW_qrW_total / (logoRatio + qrRatio), maxBrandHeight);
 
       const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
@@ -246,12 +247,16 @@
       const ctx = canvas.getContext('2d')!;
       const fullLayout = computeStripLayout((layout as any).count, dpi, topIn, bottomIn);
       const logoW = logoRatio * brandHeight;
-      const qrW = qrRatio * brandHeight;
-      const totalWidth = logoW + PREVIEW_SETTINGS.BRAND_GAP_PX + qrW;
-      const brandX = fullLayout.contentX + (fullLayout.contentWidthPx - totalWidth) / 2;
-      const brandY = PREVIEW_SETTINGS.BRAND_TOP_PX;
-      ctx.drawImage(logoImg, brandX, brandY, logoW, brandHeight);
-      ctx.drawImage(realQRImg, brandX + logoW + PREVIEW_SETTINGS.BRAND_GAP_PX, brandY, qrW, brandHeight);
+      const qrHeight = brandHeight * 0.6;
+      const qrW = qrRatio * qrHeight;
+      
+      const logoX = fullLayout.contentX;
+      const qrX = fullLayout.contentX + fullLayout.contentWidthPx - qrW;
+      const logoY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+      const qrY = logoY + (brandHeight - qrHeight) / 2;
+
+      if (logoImg) ctx.drawImage(logoImg, logoX, logoY, logoW, brandHeight);
+      if (realQRImg) ctx.drawImage(realQRImg, qrX, qrY, qrW, qrHeight);
       
       // Draw Timestamp & Caption (Simplified for re-render)
       const date = new Date();
@@ -514,16 +519,16 @@
                 <label for="size-range" class="text-[10px] font-medium text-slate-400">Size</label>
                 <span class="text-[10px] font-bold text-purple-400">{captionSize}px</span>
               </div>
-              <input
-                id="size-range"
-                type="range"
-                min="12"
-                max="100"
-                step="1"
-                bind:value={captionSize}
-                on:input={updatePreview}
-                class="w-full accent-purple-300"
-              />
+              <div class="grid grid-cols-5 gap-1.5">
+                {#each PREVIEW_SETTINGS.AVAILABLE_CAPTION_SIZES as size}
+                  <button
+                    class="py-2.5 rounded-lg text-[10px] font-bold transition-all border {captionSize === size ? 'bg-purple-100/50 border-purple-300 text-purple-600' : 'bg-slate-50 border-transparent text-slate-400 hover:bg-slate-100 hover:text-slate-500'}"
+                    on:click={() => { captionSize = size; updatePreview(); }}
+                  >
+                    {size}
+                  </button>
+                {/each}
+              </div>
             </div>
           </div>
         </section>

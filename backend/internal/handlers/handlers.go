@@ -372,25 +372,30 @@ func (h *Handler) UpdateStrip(c *gin.Context) {
 
 	var strip models.Strip
 	log.Printf("UpdateStrip lookup: id=%s, user_id=%s", stripID, userID)
-	if err := h.DB.Where("id = ? AND user_id = ?", stripID, userID).First(&strip).Error; err != nil {
-		log.Printf("UpdateStrip NOT FOUND with user_id: id=%s, user_id=%s", stripID, userID)
-		
-		// Diagnostic: Check if ID exists AT ALL
-		var check models.Strip
-		if errCheck := h.DB.Where("id = ?", stripID).First(&check).Error; errCheck == nil {
-			storedUID := "NIL"
-			if check.UserID != nil {
-				storedUID = *check.UserID
-			}
-			log.Printf("DIAGNOSTIC: Strip %s EXISTS. Stored UserID: %s, Current UserID: %s", stripID, storedUID, userID)
-		} else {
-			log.Printf("DIAGNOSTIC: Strip %s TRULY does not exist in DB", stripID)
-		}
-
+	
+	// 1. Find the strip regardless of owner first
+	if err := h.DB.Where("id = ?", stripID).First(&strip).Error; err != nil {
+		log.Printf("UpdateStrip NOT FOUND: id=%s", stripID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Strip not found"})
 		return
 	}
-	log.Printf("UpdateStrip FOUND: id=%s", strip.ID)
+
+	// 2. Ownership & Claiming Logic
+	if strip.UserID != nil && *strip.UserID != userID {
+		log.Printf("UpdateStrip FORBIDDEN: id=%s attempted update by %s but owned by %s", stripID, userID, *strip.UserID)
+		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to update this memory"})
+		return
+	}
+
+	// 3. If it was a guest strip, claim it for this user
+	if strip.UserID == nil {
+		log.Printf("UpdateStrip: Claiming guest strip %s for user %s", stripID, userID)
+		strip.UserID = &userID
+		strip.IsGuest = false
+		strip.ExpiresAt = nil // Permanent save
+	}
+
+	log.Printf("UpdateStrip PROCEEDING: id=%s, for user=%s", strip.ID, userID)
 
 	if req.Title != "" {
 		strip.Title = req.Title
