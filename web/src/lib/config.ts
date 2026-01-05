@@ -2,6 +2,9 @@
  * Centralized configuration for the web frontend.
  * Backend is always reached via nginx or dev proxy.
  */
+import logo from '$lib/assets/wuby_logo.png';
+import mascot from '$lib/assets/booth_mascot_pastel.png';
+
 export const API_CONFIG = {
     // IMPORTANT: relative base URL
     BASE_URL: '',
@@ -31,8 +34,8 @@ export const API_CONFIG = {
  */
 export const BRAND_CONFIG = {
     NAME: 'Wuby',
-    LOGO: '/wuby_logo.png',
-    MASCOT: '/booth_mascot_pastel.png',
+    LOGO: logo,
+    MASCOT: mascot,
     TAGLINE: 'Digital Memories'
 };
 
