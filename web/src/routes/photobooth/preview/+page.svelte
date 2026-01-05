@@ -17,20 +17,45 @@
   let caption = PREVIEW_SETTINGS.DEFAULT_CAPTION;
   let captionSize = PREVIEW_SETTINGS.DEFAULT_CAPTION_SIZE;
   let font = PREVIEW_SETTINGS.DEFAULT_FONT;
+  let stripColor = PREVIEW_SETTINGS.STRIP_BG_COLOR;
 
 
 
   let previewUrl: string | null = null;
   let error: string | null = null;
+  let logoImg: HTMLImageElement | null = null;
+  let qrImg: HTMLImageElement | null = null;
 
   // Subscribe stores (NO goto here)
   layoutStore.subscribe(v => layout = v);
   photoboothStore.subscribe(v => shots = v.shots);
 
+  const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 
   onMount(async () => {
+    try {
+      [logoImg, qrImg] = await Promise.all([
+        loadImage('/wuby_logo.png'),
+        loadImage('/sample_qr.png')
+      ]);
+    } catch (e) {
+      console.error('Failed to pre-load branding:', e);
+    }
     await updatePreview();
   });
+
+  let updateTimeout: any;
+  function debouncedUpdate() {
+    clearTimeout(updateTimeout);
+    updateTimeout = setTimeout(() => {
+      updatePreview();
+    }, 50); // Small delay for smooth feel
+  }
 
 
   async function updatePreview() {
@@ -45,18 +70,10 @@
       const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
       const initialLayout = computeStripLayout(layout.count, dpi);
       
-      // 2. Load Brand Assets
-      const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-      });
-
-      const [logo, qr] = await Promise.all([
-        loadImage('/wuby_logo.png'),
-        loadImage('/sample_qr.png')
-      ]);
+      // 2. Use Pre-loaded Brand Assets
+      if (!logoImg || !qrImg) return;
+      const logo = logoImg;
+      const qr = qrImg;
 
       const logoRatio = logo.width / logo.height;
       const qrRatio = qr.width / qr.height;
@@ -81,7 +98,8 @@
         dpi,
         filter,
         topIn,
-        bottomIn
+        bottomIn,
+        stripColor
       );
 
       const ctx = canvas.getContext('2d');
@@ -153,11 +171,11 @@
   let showControls = false;
 
   async function onFilterChange() {
-    await updatePreview();
+    debouncedUpdate();
   }
 
   async function onCaptionInput() {
-    await updatePreview();
+    debouncedUpdate();
   }
 </script>
 
@@ -195,18 +213,18 @@
 
   <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
     <!-- Strip Preview Section - Minimalist -->
-    <div class="flex-1 flex items-center justify-center p-6 md:p-12 bg-purple-100/10">
+    <div class="flex-1 flex items-center justify-center p-4 md:p-12 bg-purple-100/10 overflow-hidden">
       {#if error}
         <div class="text-center">
           <p class="text-sm text-red-400 mb-4">{error}</p>
           <button class="text-xs font-bold text-purple-500 underline" on:click={() => location.reload()}>Try again</button>
         </div>
       {:else if previewUrl}
-        <div class="h-full relative flex items-center justify-center">
+        <div class="h-full w-full relative flex items-center justify-center overflow-hidden">
           <img
             src={previewUrl}
             alt="Photobooth strip"
-            class="h-full w-auto max-w-full object-contain shadow-[0_20px_60px_rgba(159,122,234,0.18)] border-[6px] md:border-[10px] border-white rounded-sm transition-transform duration-500"
+            class="max-h-full max-w-full object-contain transition-transform duration-500 shadow-sm"
           />
         </div>
       {:else}
@@ -237,6 +255,39 @@
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             {/each}
+          </div>
+        </section>
+
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-[10px] font-bold uppercase text-purple-400 tracking-[0.2em]">Frame Color</h2>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            {#each PREVIEW_SETTINGS.STRIP_COLORS as color}
+              <button
+                class="w-8 h-8 rounded-full border-2 transition-all active:scale-90 {stripColor === color.id ? 'border-purple-500 ring-2 ring-purple-100 scale-110' : 'border-slate-200'}"
+                style="background-color: {color.id}"
+                title={color.label}
+                on:click={() => { stripColor = color.id; updatePreview(); }}
+              >
+              </button>
+            {/each}
+
+            <!-- Custom Color Picker -->
+            <label 
+              class="w-8 h-8 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center cursor-pointer hover:border-purple-300 transition-all active:scale-90 relative overflow-hidden"
+              title="Custom Color"
+            >
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              <input 
+                type="color" 
+                class="absolute inset-0 opacity-0 cursor-pointer scale-150"
+                bind:value={stripColor}
+                on:input={debouncedUpdate}
+              />
+            </label>
           </div>
         </section>
 

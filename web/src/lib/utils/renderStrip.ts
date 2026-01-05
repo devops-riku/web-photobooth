@@ -5,16 +5,19 @@ export async function renderStripCanvas(
     images: string[],
     photoCount: 2 | 3 | 4,
     dpi = 300,
-    filter = 'none'
+    filter = 'none',
+    topIn = 0.6,
+    bottomIn = 0.8,
+    bgColor = '#ffffff'
 ): Promise<HTMLCanvasElement> {
-    const layout = computeStripLayout(photoCount, dpi);
+    const layout = computeStripLayout(photoCount, dpi, topIn, bottomIn);
 
     const canvas = document.createElement('canvas');
     canvas.width = layout.canvasWidthPx;
     canvas.height = layout.canvasHeightPx;
 
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const loadedImages = await Promise.all(
