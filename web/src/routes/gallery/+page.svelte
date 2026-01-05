@@ -25,6 +25,10 @@
   let newTitle = '';
   let isUpdating = false;
 
+  let isSelectMode = false;
+  let selectedIds = new Set<number>();
+  let isDeletingBatch = false;
+
   let isMenuOpen = false;
 
   onMount(async () => {
@@ -119,6 +123,60 @@
       isUpdating = false;
     }
   }
+
+  function toggleSelectMode() {
+    isSelectMode = !isSelectMode;
+    selectedIds.clear();
+    selectedIds = selectedIds; // Trigger reactivity
+  }
+
+  function toggleSelection(id: number) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    selectedIds = selectedIds; // Trigger reactivity
+  }
+
+  async function deleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} memories? This cannot be undone.`)) return;
+
+    isDeletingBatch = true;
+    const idsToDelete = Array.from(selectedIds);
+    let successCount = 0;
+    
+    // We'll process these in parallel
+    const deletePromises = idsToDelete.map(async (id) => {
+        try {
+            const response = await fetch(getApiUrl('STRIP_DETAIL', id), {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) return id;
+            return null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    const results = await Promise.all(deletePromises);
+    const deletedIds = results.filter((id): id is number => id !== null);
+
+    // Update UI
+    strips = strips.filter(s => !deletedIds.includes(s.id));
+    
+    // Reset mode
+    isSelectMode = false;
+    selectedIds.clear();
+    selectedIds = selectedIds;
+    isDeletingBatch = false;
+
+    if (deletedIds.length < idsToDelete.length) {
+        alert(`Deleted ${deletedIds.length} memories. Some failed to delete.`);
+    }
+  }
 </script>
 
 <div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full">
@@ -156,7 +214,15 @@
       </div>
       
       <!-- Desktop Right: Sign Out -->
-      <div class="hidden md:flex w-32 justify-end">
+      <div class="hidden md:flex w-32 justify-end items-center gap-4">
+        {#if strips.length > 0}
+            <button 
+                on:click={toggleSelectMode}
+                class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors"
+            >
+                {isSelectMode ? 'Cancel' : 'Select'}
+            </button>
+        {/if}
         <button 
           on:click={() => { localStorage.removeItem('sb_token'); goto('/auth/login'); }}
           class="text-xs font-bold uppercase tracking-widest text-purple-400 hover:text-purple-700 transition-colors"
@@ -236,8 +302,8 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
         {#each strips as strip (strip.id)}
           <button 
-            class="group flex flex-col gap-3 animate-in text-left w-full"
-            on:click={() => openViewModal(strip)}
+            class="group flex flex-col gap-3 animate-in text-left w-full relative"
+            on:click={() => isSelectMode ? toggleSelection(strip.id) : openViewModal(strip)}
           >
             <!-- Square container for all thumbnails -->
             <div class="relative w-full aspect-square overflow-hidden rounded-2xl bg-white shadow-lg shadow-purple-100/50 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-purple-200/50 ring-1 ring-purple-50">
@@ -249,6 +315,17 @@
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </div>
+              
+              <!-- Selection Checkbox Overlay -->
+              {#if isSelectMode}
+                <div class="absolute top-3 right-3 z-10">
+                    <div class="w-6 h-6 rounded-full border-2 border-white shadow-sm flex items-center justify-center transition-all {selectedIds.has(strip.id) ? 'bg-purple-600 border-purple-600' : 'bg-black/20 hover:bg-black/40'}">
+                        {#if selectedIds.has(strip.id)}
+                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        {/if}
+                    </div>
+                </div>
+              {/if}
             </div>
             <div class="px-1">
               <h3 class="text-xs font-bold text-purple-900 truncate">{strip.title || 'Untitled'}</h3>
@@ -261,6 +338,25 @@
       </div>
     {/if}
   </main>
+
+  <!-- Floating Delete Bar -->
+  {#if isSelectMode && selectedIds.size > 0}
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
+        <button 
+            on:click={deleteSelected}
+            disabled={isDeletingBatch}
+            class="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center gap-3 disabled:opacity-50"
+        >
+            {#if isDeletingBatch}
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Deleting...</span>
+            {:else}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span>Delete ({selectedIds.size})</span>
+            {/if}
+        </button>
+    </div>
+  {/if}
 
   <!-- View Modal (Mobile Responsive) -->
   {#if viewingStrip}

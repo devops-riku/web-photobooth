@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -416,7 +417,41 @@ func (h *Handler) DeleteStrip(c *gin.Context) {
 	userID := c.GetString("user_id")
 	stripID := c.Param("id")
 
-	if err := h.DB.Where("id = ? AND user_id = ?", stripID, userID).Delete(&models.Strip{}).Error; err != nil {
+	// 1. Get the strip to find the file path
+	var strip models.Strip
+	if err := h.DB.Where("id = ? AND user_id = ?", stripID, userID).First(&strip).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Strip not found"})
+		return
+	}
+
+	// 2. Delete from S3 (DigitalOcean Spaces)
+	if strip.FileURL != "" {
+		// Extract the key from the URL
+		// URL format: https://<bucket>.<endpoint>/<key>
+		// We can try to parse the URL
+		u, err := url.Parse(strip.FileURL)
+		if err == nil {
+			// Path usually starts with /, trim it
+			key := strings.TrimPrefix(u.Path, "/")
+			
+			// Safety check: key shouldn't be empty
+			if key != "" {
+				_, err := h.S3Client.DeleteObject(c.Request.Context(), &s3.DeleteObjectInput{
+					Bucket: aws.String(h.Bucket),
+					Key:    aws.String(key),
+				})
+				if err != nil {
+					log.Printf("Failed to delete S3 object %s: %v", key, err)
+					// We continue to delete from DB even if S3 fails, to keep DB consistent with user intent
+				} else {
+					log.Printf("Deleted S3 object: %s", key)
+				}
+			}
+		}
+	}
+
+	// 3. Delete from DB
+	if err := h.DB.Delete(&strip).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete strip"})
 		return
 	}
