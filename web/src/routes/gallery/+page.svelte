@@ -217,6 +217,10 @@
         openViewModal(strip);
     }
   }
+
+  function handleModalKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') viewingStrip = null;
+  }
 </script>
 
 <div class="h-screen overflow-y-auto bg-[#f8f2ff] flex flex-col relative w-full">
@@ -227,6 +231,7 @@
       <button 
         class="md:hidden p-2 -ml-2 text-purple-900"
         on:click={() => isMenuOpen = true}
+        aria-label="Open menu"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
@@ -409,12 +414,17 @@
     <div 
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in p-4 md:p-8"
       on:click|self={() => viewingStrip = null}
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      on:keydown={handleModalKeydown}
     >
       <div class="relative w-full h-full md:w-auto md:h-auto md:max-h-[90vh] flex flex-col items-center gap-4 md:gap-4">
         <!-- Close Button -->
         <button 
           on:click={() => viewingStrip = null}
           class="absolute top-4 right-4 md:top-2 md:right-2 lg:-right-12 lg:-top-0 z-20 p-2 text-white/50 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full md:bg-transparent"
+          aria-label="Close modal"
         >
           <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -474,8 +484,9 @@
         <h2 class="text-xl font-light text-purple-900 mb-6">Rename Memory</h2>
         <div class="space-y-6">
           <div class="flex flex-col gap-2">
-            <label class="text-[10px] font-bold uppercase tracking-widest text-purple-400 px-2 opacity-70">New Name</label>
+            <label for="new-name-input" class="text-[10px] font-bold uppercase tracking-widest text-purple-400 px-2 opacity-70">New Name</label>
             <input 
+              id="new-name-input"
               type="text" 
               bind:value={newTitle}
               class="w-full bg-purple-50/50 border border-purple-100/50 rounded-2xl px-6 py-4 text-sm font-medium text-purple-900 focus:ring-4 focus:ring-purple-100/50 focus:bg-white transition-all outline-none"
