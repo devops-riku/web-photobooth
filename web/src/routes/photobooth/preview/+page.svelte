@@ -101,7 +101,8 @@
   <!-- Top Bar -->
   <header class="h-16 border-b border-purple-50 flex justify-between items-center px-4 md:px-8 bg-white shrink-0 z-20">
     <div class="flex items-center gap-2">
-      <span class="text-[10px] md:text-sm font-semibold tracking-tight text-purple-900/60 uppercase">Preview</span>
+      <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+      <span class="text-[10px] font-bold tracking-[0.2em] text-purple-400 uppercase">Preview</span>
     </div>
     
     <div class="flex gap-2 md:gap-3">
