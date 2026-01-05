@@ -58,7 +58,7 @@
                 class="px-6 md:px-10 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 {selectedTimer === t ? 'bg-white text-purple-500 shadow-sm' : 'text-purple-400 hover:text-purple-500'}"
                 on:click={() => selectedTimer = t}
               >
-                {t}s
+                {t === 0 ? 'Manual' : t + 's'}
               </button>
             {/each}
           </div>
