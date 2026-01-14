@@ -126,10 +126,10 @@
       </p>
       
       <button 
-        on:click={() => goto('/photobooth')}
+        on:click={() => goto('/home')}
         class="text-[9px] font-bold text-purple-200 uppercase tracking-[0.2em] hover:text-purple-400 transition-colors"
       >
-        Back to Photobooth
+        Back to Home
       </button>
     </div>
   </div>
