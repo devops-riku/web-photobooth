@@ -323,13 +323,54 @@
       // Race against a timeout
       await Promise.race([
         processGeneration(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Operation timed out. Please try clearing cache.")), 15000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Operation timed out.")), 15000))
       ]);
 
+      // Success! Clear any retry flags so next time we have a fresh start
+      sessionStorage.removeItem('retry_fix_attempted');
 
     } catch (e: any) {
       console.error("Critical error during final render/upload:", e);
-      // Detailed error for mobile debugging
+      
+      // AUTO-RECOVERY LOGIC
+      const hasRetried = sessionStorage.getItem('retry_fix_attempted');
+      
+      if (!hasRetried) {
+         console.log("Attempting auto-recovery...");
+         sessionStorage.setItem('retry_fix_attempted', 'true');
+         
+         // 1. Preserve Photos (Critical)
+         // We manually reconstruct what the store saves
+         const currentStore = {
+            shots: shots || [],
+            uploadedId: null, // Reset ID to force new upload
+            settings: { filter, stripColor, caption, captionSize, font, roundedCorners }
+         };
+         // Layout store backup if needed (usually layout persists in session/local too?)
+         // layoutStore typically isn't as complex, but let's assume it's fine or re-defaultable.
+         // Actually, let's backup layout too if we can access it, but `layout` var is available.
+         const layoutBackup = JSON.stringify(layout);
+
+         // 2. Nuke Caches
+         if ('serviceWorker' in navigator) {
+             try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for(let registration of registrations) { await registration.unregister(); } 
+             } catch(err) { console.warn("SW cleanup failed", err); }
+         }
+         localStorage.clear();
+         sessionStorage.clear();
+
+         // 3. Restore Photos
+         sessionStorage.setItem('photobooth_store', JSON.stringify(currentStore));
+         if (layoutBackup) sessionStorage.setItem('layout_store', layoutBackup); // Assuming standard naming
+         
+         // 4. Reload
+         location.reload();
+         return;
+      }
+
+      // Detailed error for mobile debugging if retry failed
       uploadError = `${e.name || 'Error'}: ${e.message}`;
       if (e.stack) console.log(e.stack);
       // We keep isUploading = true so the error UI remains visible
