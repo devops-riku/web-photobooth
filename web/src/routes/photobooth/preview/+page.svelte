@@ -215,7 +215,18 @@
       console.log("PHOTOBOOTH DEBUG: Expected URL:", shareUrl);
       
       // 1. Generate QR Locally
-      const qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 200 });
+      let qrDataUrl;
+      try {
+        console.log("QRCode Lib:", QRCode); 
+        // Handle potential import variations (CJS vs ESM)
+        const toDataURL = QRCode?.toDataURL || (QRCode as any)?.default?.toDataURL;
+        if (!toDataURL) throw new Error(`QRCode library not loaded correctly: ${JSON.stringify(QRCode)}`);
+        
+        qrDataUrl = await toDataURL(shareUrl, { margin: 1, width: 200 });
+      } catch (qrErr: any) {
+        throw new Error(`QR Generation Failed: ${qrErr.message}`);
+      }
+
       const realQRImg = new Image();
       await new Promise((resolve, reject) => {
         realQRImg.onload = resolve;
@@ -228,8 +239,8 @@
       // Re-run the exact layout and drawing logic
       if (!logoImg) throw new Error("Logo not loaded");
       
-      const logoRatio = logoImg.width / logoImg.height;
-      const qrRatio = realQRImg.width / realQRImg.height;
+      const logoRatio = (logoImg.width || 100) / (logoImg.height || 100);
+      const qrRatio = (realQRImg.width || 100) / (realQRImg.height || 100);
       const initialLayout = computeStripLayout((layout as any).count, dpi);
       const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
       const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
@@ -289,7 +300,7 @@
         })
       });
 
-      if (!uploadResponse.ok) throw new Error("Upload failed");
+      if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
       const result = await uploadResponse.json();
       const finalId = result.id || stripId; // Use backend ID if available
 
@@ -310,7 +321,9 @@
       goto('/photobooth/save');
     } catch (e: any) {
       console.error("Critical error during final render/upload:", e);
-      uploadError = e.message || "Failed to process final memory";
+      // Detailed error for mobile debugging
+      uploadError = `${e.name || 'Error'}: ${e.message}`;
+      if (e.stack) console.log(e.stack);
       // We keep isUploading = true so the error UI remains visible
     }
   }
