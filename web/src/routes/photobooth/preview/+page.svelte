@@ -201,124 +201,132 @@
     uploadError = '';
 
     try {
-      const stripId = generateUUID();
-      const token = localStorage.getItem('sb_token');
-      const uid = localStorage.getItem('sb_uid');
-      
-      let shareUrl = '';
-      if (token && uid) {
-        shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/${uid}/${stripId}.png`;
-      } else {
-        shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/guest/${stripId}.png`;
-      }
-      console.log("PHOTOBOOTH DEBUG: Generating ID:", stripId);
-      console.log("PHOTOBOOTH DEBUG: Expected URL:", shareUrl);
-      
-      // 1. Generate QR Locally
-      let qrDataUrl;
-      try {
-        console.log("QRCode Lib:", QRCode); 
-        // Handle potential import variations (CJS vs ESM)
-        const toDataURL = QRCode?.toDataURL || (QRCode as any)?.default?.toDataURL;
-        if (!toDataURL) throw new Error(`QRCode library not loaded correctly: ${JSON.stringify(QRCode)}`);
+      const processGeneration = async () => {
+        const stripId = generateUUID();
+        const token = localStorage.getItem('sb_token');
+        const uid = localStorage.getItem('sb_uid');
         
-        qrDataUrl = await toDataURL(shareUrl, { margin: 1, width: 200 });
-      } catch (qrErr: any) {
-        throw new Error(`QR Generation Failed: ${qrErr.message}`);
-      }
+        let shareUrl = '';
+        if (token && uid) {
+          shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/${uid}/${stripId}.png`;
+        } else {
+          shareUrl = `${API_CONFIG.DO_SPACES_URL}/strips/guest/${stripId}.png`;
+        }
+        console.log("PHOTOBOOTH DEBUG: Generating ID:", stripId);
+        console.log("PHOTOBOOTH DEBUG: Expected URL:", shareUrl);
+        
+        // 1. Generate QR Locally
+        let qrDataUrl;
+        try {
+          console.log("QRCode Lib:", QRCode); 
+          // Handle potential import variations (CJS vs ESM)
+          const toDataURL = QRCode?.toDataURL || (QRCode as any)?.default?.toDataURL;
+          if (!toDataURL) throw new Error(`QRCode library not loaded correctly: ${JSON.stringify(QRCode)}`);
+          
+          qrDataUrl = await toDataURL(shareUrl, { margin: 1, width: 200 });
+        } catch (qrErr: any) {
+          throw new Error(`QR Generation Failed: ${qrErr.message}`);
+        }
 
-      const realQRImg = new Image();
-      await new Promise((resolve, reject) => {
-        realQRImg.onload = resolve;
-        realQRImg.onerror = reject;
-        realQRImg.src = qrDataUrl;
-      });
+        const realQRImg = new Image();
+        await new Promise((resolve, reject) => {
+          realQRImg.onload = resolve;
+          realQRImg.onerror = reject;
+          realQRImg.src = qrDataUrl;
+        });
 
-      // 2. Re-render with REAL assets for the upload version
-      const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
-      // Re-run the exact layout and drawing logic
-      if (!logoImg) throw new Error("Logo not loaded");
-      
-      const logoRatio = (logoImg.width || 100) / (logoImg.height || 100);
-      const qrRatio = (realQRImg.width || 100) / (realQRImg.height || 100);
-      const initialLayout = computeStripLayout((layout as any).count, dpi);
-      const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
-      const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
-      
-      const maxBrandHeight = 200;
-      const brandHeight = Math.min(logoW_qrW_total / (logoRatio + qrRatio), maxBrandHeight);
+        // 2. Re-render with REAL assets for the upload version
+        const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
+        // Re-run the exact layout and drawing logic
+        if (!logoImg) throw new Error("Logo not loaded");
+        
+        const logoRatio = (logoImg.width || 100) / (logoImg.height || 100);
+        const qrRatio = (realQRImg.width || 100) / (realQRImg.height || 100);
+        const initialLayout = computeStripLayout((layout as any).count, dpi);
+        const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
+        const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
+        
+        const maxBrandHeight = 200;
+        const brandHeight = Math.min(logoW_qrW_total / (logoRatio + qrRatio), maxBrandHeight);
 
-      const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
-      const topIn = topPx / dpi;
-      const timestampH = 20;
-      const captionH = captionSize * 1.2;
-      const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
-      const bottomIn = bottomPx / dpi;
+        const topPx = PREVIEW_SETTINGS.BRAND_TOP_PX + brandHeight + PREVIEW_SETTINGS.BRAND_BOT_PX;
+        const topIn = topPx / dpi;
+        const timestampH = 20;
+        const captionH = captionSize * 1.2;
+        const bottomPx = PREVIEW_SETTINGS.TIMESTAMP_TOP_PX + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX + captionH + PREVIEW_SETTINGS.CAPTION_BOT_PX;
+        const bottomIn = bottomPx / dpi;
 
-      const canvas = await renderStripCanvas(shots, (layout as any).count, dpi, filter, topIn, bottomIn, stripColor, roundedCorners);
-      const ctx = canvas.getContext('2d')!;
-      const fullLayout = computeStripLayout((layout as any).count, dpi, topIn, bottomIn);
-      const logoW = logoRatio * brandHeight;
-      const qrHeight = brandHeight * 0.6;
-      const qrW = qrRatio * qrHeight;
-      
-      const logoX = fullLayout.contentX;
-      const qrX = fullLayout.contentX + fullLayout.contentWidthPx - qrW;
-      const logoY = PREVIEW_SETTINGS.BRAND_TOP_PX;
-      const qrY = logoY + (brandHeight - qrHeight) / 2;
+        const canvas = await renderStripCanvas(shots, (layout as any).count, dpi, filter, topIn, bottomIn, stripColor, roundedCorners);
+        const ctx = canvas.getContext('2d')!;
+        const fullLayout = computeStripLayout((layout as any).count, dpi, topIn, bottomIn);
+        const logoW = logoRatio * brandHeight;
+        const qrHeight = brandHeight * 0.6;
+        const qrW = qrRatio * qrHeight;
+        
+        const logoX = fullLayout.contentX;
+        const qrX = fullLayout.contentX + fullLayout.contentWidthPx - qrW;
+        const logoY = PREVIEW_SETTINGS.BRAND_TOP_PX;
+        const qrY = logoY + (brandHeight - qrHeight) / 2;
 
-      if (logoImg) ctx.drawImage(logoImg, logoX, logoY, logoW, brandHeight);
-      if (realQRImg) ctx.drawImage(realQRImg, qrX, qrY, qrW, qrHeight);
-      
-      // Draw Timestamp & Caption (Simplified for re-render)
-      const date = new Date();
-      const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase() + " • " + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
-      const lastPhotoBottom = fullLayout.topCanvasPx + (fullLayout.photoHeightPx * (layout as any).count) + (fullLayout.gapPx * ((layout as any).count - 1));
-      const timestampY = lastPhotoBottom + PREVIEW_SETTINGS.TIMESTAMP_TOP_PX;
-      ctx.fillStyle = PREVIEW_SETTINGS.TIMESTAMP_COLOR; ctx.textAlign = 'center'; ctx.font = '700 12px Montserrat, sans-serif'; ctx.letterSpacing = '2px';
-      ctx.fillText(timeStr, canvas.width / 2, timestampY + 10);
-      ctx.fillStyle = PREVIEW_SETTINGS.CAPTION_COLOR; ctx.textAlign = 'center'; ctx.font = `${captionSize}px ${font}, system-ui, sans-serif`;
-      const captionY = timestampY + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX;
-      ctx.fillText(caption || ' ', canvas.width / 2, captionY + (captionSize * 0.8));
+        if (logoImg) ctx.drawImage(logoImg, logoX, logoY, logoW, brandHeight);
+        if (realQRImg) ctx.drawImage(realQRImg, qrX, qrY, qrW, qrHeight);
+        
+        // Draw Timestamp & Caption (Simplified for re-render)
+        const date = new Date();
+        const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase() + " • " + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+        const lastPhotoBottom = fullLayout.topCanvasPx + (fullLayout.photoHeightPx * (layout as any).count) + (fullLayout.gapPx * ((layout as any).count - 1));
+        const timestampY = lastPhotoBottom + PREVIEW_SETTINGS.TIMESTAMP_TOP_PX;
+        ctx.fillStyle = PREVIEW_SETTINGS.TIMESTAMP_COLOR; ctx.textAlign = 'center'; ctx.font = '700 12px Montserrat, sans-serif'; ctx.letterSpacing = '2px';
+        ctx.fillText(timeStr, canvas.width / 2, timestampY + 10);
+        ctx.fillStyle = PREVIEW_SETTINGS.CAPTION_COLOR; ctx.textAlign = 'center'; ctx.font = `${captionSize}px ${font}, system-ui, sans-serif`;
+        const captionY = timestampY + timestampH + PREVIEW_SETTINGS.TIMESTAMP_BOT_PX;
+        ctx.fillText(caption || ' ', canvas.width / 2, captionY + (captionSize * 0.8));
 
-      const finalOutput = canvas.toDataURL('image/png');
+        const finalOutput = canvas.toDataURL('image/png');
 
-      // 3. Upload
-      const apiEndpoint = token ? getApiUrl('SAVE_STRIP') : getApiUrl('GUEST_SAVE');
-      
-      const uploadResponse = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          id: stripId,
-          image: finalOutput,
-          title: token ? 'My Memory' : 'Guest Memory',
-          caption: caption || 'Captured with Wuby'
-        })
-      });
+        // 3. Upload
+        const apiEndpoint = token ? getApiUrl('SAVE_STRIP') : getApiUrl('GUEST_SAVE');
+        
+        const uploadResponse = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            id: stripId,
+            image: finalOutput,
+            title: token ? 'My Memory' : 'Guest Memory',
+            caption: caption || 'Captured with Wuby'
+          })
+        });
 
-      if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-      const result = await uploadResponse.json();
-      const finalId = result.id || stripId; // Use backend ID if available
+        if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        const result = await uploadResponse.json();
+        const finalId = result.id || stripId; 
 
-      // 4. Update Store and Redirect
-      photoboothStore.update(s => ({
-        ...s,
-        finalStrip: finalOutput,
-        uploadedId: finalId,
-        settings: { filter, stripColor, caption, captionSize, font, roundedCorners }
-      }));
+        // 4. Update Store and Redirect
+        photoboothStore.update(s => ({
+          ...s,
+          finalStrip: finalOutput,
+          uploadedId: finalId,
+          settings: { filter, stripColor, caption, captionSize, font, roundedCorners }
+        }));
 
-      // If guest, we should pass info to save page or handle there
-      if (!token) {
-        // For guest, save page will need the ID to show the link
-        localStorage.setItem('last_guest_id', stripId);
-      }
-      
-      goto('/photobooth/save');
+        if (!token) {
+          localStorage.setItem('last_guest_id', stripId);
+        }
+        
+        goto('/photobooth/save');
+      };
+
+      // Race against a timeout
+      await Promise.race([
+        processGeneration(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Operation timed out. Please try clearing cache.")), 15000))
+      ]);
+
+
     } catch (e: any) {
       console.error("Critical error during final render/upload:", e);
       // Detailed error for mobile debugging
@@ -408,14 +416,31 @@
       <p class="text-xs text-purple-300 font-bold uppercase tracking-[0.3em] animate-pulse">Please stay on this page</p>
       
       {#if uploadError}
-        <div class="mt-8 p-6 bg-red-50 text-red-600 rounded-[2rem] text-xs font-bold uppercase tracking-widest max-w-xs text-center border-2 border-red-100 animate-in zoom-in duration-300">
-          <p class="mb-4">{uploadError}</p>
-          <button 
-            on:click={() => { isUploading = false; uploadError = ''; }} 
-            class="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-100"
-          >
-            Go Back
-          </button>
+        <div class="mt-8 p-6 bg-red-50 text-red-600 rounded-[2rem] text-xs font-bold uppercase tracking-widest max-w-xs text-center border-2 border-red-100 animate-in zoom-in duration-300 z-[101]">
+          <p class="mb-4 text-sm break-words">{uploadError}</p>
+          <div class="flex flex-col gap-2">
+            <button 
+              on:click={() => { isUploading = false; uploadError = ''; }} 
+              class="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-100"
+            >
+              Go Back
+            </button>
+            <button 
+              on:click={() => { 
+                localStorage.clear(); 
+                sessionStorage.clear(); 
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) { registration.unregister(); } 
+                  });
+                }
+                location.reload(); 
+              }} 
+              class="w-full bg-white border border-red-200 text-red-400 py-3 rounded-xl hover:bg-red-50 transition-colors"
+            >
+              Clear Cache & Reload
+            </button>
+          </div>
         </div>
       {/if}
     </div>
