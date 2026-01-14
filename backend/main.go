@@ -25,6 +25,7 @@ func main() {
 		if err := models.Migrate(db); err != nil {
 			log.Printf("Warning: Migration failed: %v", err)
 		}
+		storage.SeedSuperUser(db)
 	}
 
 	// 3. Initialize S3

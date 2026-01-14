@@ -11,6 +11,7 @@ type User struct {
 	Username  string    `gorm:"uniqueIndex" json:"username"`
 	Email     string    `gorm:"uniqueIndex" json:"email"`
 	Password  string    `json:"-"`
+	IsAdmin   bool      `json:"is_admin" gorm:"default:false"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

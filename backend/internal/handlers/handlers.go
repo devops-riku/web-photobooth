@@ -67,7 +67,51 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 				protected.DELETE("/:id", h.DeleteStrip)
 			}
 		}
+
+		admin := api.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(h.JWTSecret))
+		admin.Use(func(c *gin.Context) {
+			if !c.GetBool("is_admin") {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+				return
+			}
+			c.Next()
+		})
+		{
+			admin.GET("/users", h.AdminGetUsers)
+			admin.POST("/users", h.AdminCreateUser)
+			admin.PATCH("/users/:id/password", h.AdminResetPassword)
+			admin.PATCH("/users/:id/role", h.AdminUpdateUserRole)
+			admin.GET("/strips", h.AdminGetStrips)
+			admin.DELETE("/strips/:id", h.AdminDeleteStrip)
+			admin.DELETE("/users/:id", h.AdminDeleteUser)
+		}
 	}
+}
+
+func (h *Handler) AdminUpdateUserRole(c *gin.Context) {
+	userID := c.Param("id")
+	var req struct {
+		IsAdmin bool `json:"is_admin"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var user models.User
+	if err := h.DB.First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	if err := h.DB.Model(&user).Update("is_admin", req.IsAdmin).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update role"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Role updated successfully"})
 }
 
 func (h *Handler) Signup(c *gin.Context) {
@@ -137,8 +181,9 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(),
+		"user_id":  user.ID,
+		"is_admin": user.IsAdmin,
+		"exp":      time.Now().Add(time.Hour * 72).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(h.JWTSecret))
@@ -153,6 +198,7 @@ func (h *Handler) Login(c *gin.Context) {
 			"id":       user.ID,
 			"username": user.Username,
 			"email":    user.Email,
+			"is_admin": user.IsAdmin,
 		},
 	})
 }
@@ -503,4 +549,184 @@ func (h *Handler) CleanupExpiredStrips() {
 			log.Printf("Successfully cleaned up expired strip: %s", key)
 		}
 	}
+}
+
+// ADMIN HANDLERS
+
+func (h *Handler) AdminGetUsers(c *gin.Context) {
+	var users []models.User
+	if err := h.DB.Order("created_at desc").Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+func (h *Handler) AdminGetStrips(c *gin.Context) {
+	userID := c.Query("user_id")
+	var strips []models.Strip
+	
+	query := h.DB.Order("created_at desc")
+	if userID != "" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	// Preload User to show who owns it
+	if err := query.Preload("User").Find(&strips).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch strips"})
+		return
+	}
+	c.JSON(http.StatusOK, strips)
+}
+
+func (h *Handler) AdminDeleteUser(c *gin.Context) {
+	userID := c.Param("id")
+
+	// Prevent self-deletion if needed, or deleting the superuser if we had a check
+	// For now, just basic delete logic
+
+	// 1. Delete all strips belonging to this user (Cleanup S3)
+	var strips []models.Strip
+	h.DB.Where("user_id = ?", userID).Find(&strips)
+	for _, strip := range strips {
+		if strip.FileURL != "" {
+			u, err := url.Parse(strip.FileURL)
+			if err == nil {
+				key := strings.TrimPrefix(u.Path, "/")
+				if key != "" {
+					h.S3Client.DeleteObject(c.Request.Context(), &s3.DeleteObjectInput{
+						Bucket: aws.String(h.Bucket),
+						Key:    aws.String(key),
+					})
+				}
+			}
+		}
+		h.DB.Delete(&strip)
+	}
+
+	// 2. Delete the user
+	if err := h.DB.Delete(&models.User{}, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User and their memories deleted"})
+}
+
+func (h *Handler) AdminCreateUser(c *gin.Context) {
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		IsAdmin  bool   `json:"is_admin"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Check duplicates
+	var existing models.User
+	if err := h.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
+		return
+	}
+	if err := h.DB.Where("username = ?", req.Username).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	user := models.User{
+		ID:       uuid.New().String(),
+		Username: req.Username,
+		Email:    req.Email,
+		Password: string(hashed),
+		IsAdmin:  req.IsAdmin,
+		CreatedAt: time.Now(),
+	}
+
+	if err := h.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "User created successfully",
+		"user": gin.H{
+			"id": user.ID,
+			"username": user.Username,
+			"is_admin": user.IsAdmin,
+		},
+	})
+}
+
+func (h *Handler) AdminDeleteStrip(c *gin.Context) {
+	stripID := c.Param("id")
+
+	var strip models.Strip
+	if err := h.DB.First(&strip, "id = ?", stripID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Strip not found"})
+		return
+	}
+
+	// Delete from S3
+	if strip.FileURL != "" {
+		u, err := url.Parse(strip.FileURL)
+		if err == nil {
+			key := strings.TrimPrefix(u.Path, "/")
+			if key != "" {
+				h.S3Client.DeleteObject(c.Request.Context(), &s3.DeleteObjectInput{
+					Bucket: aws.String(h.Bucket),
+					Key:    aws.String(key),
+				})
+			}
+		}
+	}
+
+	// Delete from DB
+	if err := h.DB.Delete(&strip).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete strip"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Strip deleted"})
+}
+
+func (h *Handler) AdminResetPassword(c *gin.Context) {
+	userID := c.Param("id")
+	var req struct {
+		Password string `json:"password" binding:"required,min=6"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password must be at least 6 characters"})
+		return
+	}
+
+	var user models.User
+	if err := h.DB.First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	user.Password = string(hashed)
+	if err := h.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }

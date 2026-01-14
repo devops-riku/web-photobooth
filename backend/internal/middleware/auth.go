@@ -41,6 +41,9 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 				return
 			}
 			c.Set("user_id", uid)
+			
+			isAdmin, _ := claims["is_admin"].(bool) // Default to false if missing or wrong type
+			c.Set("is_admin", isAdmin)
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid claims"})
 			c.Abort()

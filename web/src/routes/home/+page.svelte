@@ -6,10 +6,19 @@
 
   let isMenuOpen = false;
   let isLoggedIn = false;
+  let isAdmin = false;
 
   onMount(() => {
     const token = localStorage.getItem('sb_token');
     isLoggedIn = !!token;
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        isAdmin = payload.is_admin === true;
+      } catch (e) {
+        console.error('Failed to parse token', e);
+      }
+    }
   });
 
   function handleSignOut() {
@@ -17,6 +26,7 @@
     localStorage.removeItem('sb_user');
     localStorage.removeItem('sb_uid');
     isLoggedIn = false;
+    isAdmin = false;
     goto('/auth/login');
   }
 </script>
@@ -44,6 +54,9 @@
 
       <!-- Desktop Nav -->
       <nav class="hidden md:flex items-center gap-8 flex-1 justify-end">
+        {#if isAdmin}
+          <button on:click={() => goto('/admin')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Admin</button>
+        {/if}
         <button on:click={() => goto('/gallery')} class="text-[10px] font-bold uppercase tracking-widest text-purple-400 hover:text-purple-600 transition-colors">Your Gallery</button>
         {#if isLoggedIn}
           <button 
@@ -85,6 +98,14 @@
       </div>
 
       <nav class="flex flex-col gap-8 items-center flex-grow justify-center -mt-20">
+        {#if isAdmin}
+          <button 
+            on:click={() => { isMenuOpen = false; goto('/admin'); }}
+            class="text-3xl font-light text-purple-900"
+          >
+            Admin
+          </button>
+        {/if}
         <button 
           on:click={() => { isMenuOpen = false; goto('/photobooth'); }}
           class="text-3xl font-light text-purple-900"

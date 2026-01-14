@@ -18,7 +18,13 @@ export const API_CONFIG = {
         PUBLIC_STRIP: '/api/strips/public/', // + id
         GET_STRIPS: '/api/strips/my-strips',
         STRIP_DETAIL: '/api/strips/', // + id
-        SYNC_USER: '/api/auth/sync'
+        SYNC_USER: '/api/auth/sync',
+        ADMIN_USERS: '/api/admin/users',
+        ADMIN_STRIPS: '/api/admin/strips',
+        ADMIN_DELETE_STRIP: '/api/admin/strips/', // + id
+        ADMIN_USER: '/api/admin/users/', // + id
+        ADMIN_RESET_PASSWORD: '/api/admin/users/', // + id + /password
+        ADMIN_UPDATE_ROLE: '/api/admin/users/' // + id + /role
     },
 
     // App URL (optional, used only for redirects)
