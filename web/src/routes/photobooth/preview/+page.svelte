@@ -89,8 +89,8 @@
       const logo = logoImg;
       const qr = qrImg;
 
-      const logoRatio = logo.width / logo.height;
-      const qrRatio = qr.width / qr.height;
+      const logoRatio = (logo?.width || 100) / (logo?.height || 100);
+      const qrRatio = (qr?.width || 100) / (qr?.height || 100);
       const availableBrandWidth = initialLayout.contentWidthPx - (PREVIEW_SETTINGS.BRAND_SIDE_PADDING_PX * 2);
       const logoW_qrW_total = availableBrandWidth - PREVIEW_SETTINGS.BRAND_GAP_PX;
 
@@ -189,7 +189,10 @@
     }
   }
 
+  import QRCode from 'qrcode';
+
   let processing = false;
+
   async function handleConfirm() {
     if (processing || isUploading) return;
     processing = true;
@@ -211,19 +214,14 @@
       console.log("PHOTOBOOTH DEBUG: Generating ID:", stripId);
       console.log("PHOTOBOOTH DEBUG: Expected URL:", shareUrl);
       
-      // 1. Fetch REAL QR first (with timeout)
-      const realQRImg: HTMLImageElement = await Promise.race([
-        new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error("QR Generator failed. Connection issue?"));
-          img.src = `${SAVE_SETTINGS.BASE_QR_API}${encodeURIComponent(shareUrl)}`;
-        }),
-        new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error("QR Generation timed out. Please try again.")), 12000)
-        )
-      ]);
+      // 1. Generate QR Locally
+      const qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 200 });
+      const realQRImg = new Image();
+      await new Promise((resolve, reject) => {
+        realQRImg.onload = resolve;
+        realQRImg.onerror = reject;
+        realQRImg.src = qrDataUrl;
+      });
 
       // 2. Re-render with REAL assets for the upload version
       const dpi = PREVIEW_SETTINGS.STRIP_THUMBNAIL_WIDTH;
