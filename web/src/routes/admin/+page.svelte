@@ -33,7 +33,8 @@
         if (res.status === 403) throw new Error('Unauthorized: Admin access required');
         throw new Error('Failed to load users');
       }
-      users = await res.json();
+      const data = await res.json();
+      users = data.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     } catch (e: any) {
       error = e.message;
       if (error.includes('Unauthorized')) setTimeout(() => goto('/photobooth'), 2000);
@@ -249,7 +250,7 @@
     </div>
   </header>
 
-  <main class="flex-1 p-3 md:p-8 max-w-7xl mx-auto w-full relative overflow-y-auto overflow-x-hidden">
+  <main class="flex-1 p-3 md:p-8 max-w-7xl mx-auto w-full relative overflow-hidden">
     {#if showCreateModal}
       <!-- ... existing create user modal ... -->
       <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
@@ -343,7 +344,7 @@
       </div>
     {/if}
 
-    <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-6 h-full overflow-hidden">
       <!-- Tabs -->
       <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         <button 
@@ -361,15 +362,15 @@
       </div>
 
       <!-- Content -->
-      <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl shadow-purple-100/50 border border-purple-50 min-h-[500px]">
+      <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl shadow-purple-100/50 border border-purple-50 flex-1 flex flex-col overflow-hidden">
         {#if loading}
           <div class="flex items-center justify-center h-full py-20">
             <div class="w-8 h-8 border-4 border-purple-100 border-t-purple-500 rounded-full animate-spin"></div>
           </div>
         {:else if activeTab === 'users'}
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto overflow-y-auto flex-1">
             <table class="w-full text-left border-collapse">
-              <thead>
+              <thead class="sticky top-0 bg-white z-10">
                 <tr class="border-b border-purple-100">
                   <th class="p-2 md:p-4 text-[10px] md:text-xs font-bold text-purple-400 uppercase tracking-widest">User</th>
                   <th class="p-2 md:p-4 text-[10px] md:text-xs font-bold text-purple-400 uppercase tracking-widest hidden md:table-cell">Email</th>
@@ -441,7 +442,7 @@
             </table>
           </div>
         {:else if activeTab === 'gallery'}
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col gap-3 flex-1 overflow-hidden">
             {#if selectedUserId}
               <div class="flex items-center gap-2 mb-2 p-3 bg-purple-50 rounded-xl border border-purple-100">
                 <button 
@@ -458,9 +459,9 @@
               </div>
             {/if}
 
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-left border-collapse">
-                <thead>
+                <thead class="sticky top-0 bg-white z-10">
                   <tr class="border-b border-purple-100">
                     <th class="p-2 md:p-4 text-[10px] md:text-xs font-bold text-purple-400 uppercase tracking-widest w-20">Photo</th>
                     <th class="p-2 md:p-4 text-[10px] md:text-xs font-bold text-purple-400 uppercase tracking-widest">Details</th>
